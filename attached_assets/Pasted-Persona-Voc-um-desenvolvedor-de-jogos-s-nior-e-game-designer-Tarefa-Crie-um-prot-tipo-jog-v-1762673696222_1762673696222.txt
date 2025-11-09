@@ -1,0 +1,132 @@
+Persona: Você é um desenvolvedor de jogos sênior e game designer.
+
+Tarefa: Crie um protótipo jogável ou um design document detalhado para um jogo educacional focado em memorização de comandos Git.
+
+Nome Provisório do Jogo: Git Command Runner
+
+1. Conceito Central (Core Concept)
+Gênero: Arcade de Digitação Rápida (Fast-Paced Typing Game) com elementos de Quebra-Cabeça (Puzzle).
+
+Plataforma: Web (HTML5/JavaScript) ou Mobile.
+
+Objetivo: Ensinar e reforçar a memória muscular e o conhecimento de comandos Git de forma viciante e intuitiva.
+
+Loop de Jogo (Core Loop):
+
+Um "desafio" (cenário ou comando) aparece.
+
+O jogador digita a "solução" (o comando Git).
+
+O jogo dá feedback imediato (sucesso/falha).
+
+A dificuldade e a velocidade aumentam.
+
+2. Público-Alvo
+Desenvolvedores juniores e estudantes de programação.
+
+Programadores experientes que querem acelerar seu fluxo de trabalho no Git.
+
+Qualquer pessoa que ache o Git intimidador e prefira aprender "fazendo".
+
+3. Mecânicas de Jogo Detalhadas
+O jogo é apresentado como um terminal estilizado. "Problemas" caem do topo da tela em blocos. O jogador deve resolvê-los digitando na linha de comando na parte inferior antes que cheguem ao fundo.
+
+Entrada (Input): O jogador usa o teclado físico (ou virtual) para digitar. A tecla Enter submete o comando.
+
+Blocos de Desafio: Cada bloco contém um tipo de desafio.
+
+Sistema de Pontuação:
+
+Pontos: Ganhos por cada comando correto.
+
+Combo: Acertos consecutivos aumentam um multiplicador de pontos. Errar quebra o combo.
+
+Velocidade: Bônus de pontos por resolver o desafio rapidamente.
+
+Sistema de "Vidas" ou "Stress": Se um bloco de desafio chegar ao fundo da tela, o jogador perde uma vida ou sua "Barra de Stress" aumenta. O jogo termina se as vidas acabarem ou a barra de stress encher.
+
+4. Modos de Jogo Essenciais
+O jogo deve ter modos distintos para diferentes tipos de aprendizado:
+
+Modo 1: Academia (Modo Cenário)
+Foco: Aprender por que e quando usar um comando.
+
+Jogabilidade: Os blocos que caem contêm descrições de cenários.
+
+Exemplos de Blocos:
+
+"Você criou um novo arquivo 'README.md'. Prepare-o para o commit." (Resposta esperada: git add README.md)
+
+"Salve seu trabalho atual com a mensagem 'Primeiro commit'." (Resposta esperada: git commit -m "Primeiro commit")
+
+"Crie uma nova branch chamada 'feature/login'." (Resposta esperada: git checkout -b feature/login)
+
+Modo 2: Dojo de Sintaxe (Modo Preenchimento)
+Foco: Memorizar a estrutura e os parâmetros do comando.
+
+Jogabilidade: Os blocos mostram comandos com "lacunas" (underscores). O jogador digita apenas a parte que falta.
+
+Exemplos de Blocos:
+
+git clone [________________] (Jogador digita a URL)
+
+git push origin [________________] (Jogador digita o nome da branch)
+
+git commit [__] "Mensagem" (Jogador digita -m)
+
+Modo 3: Arcade (Modo Velocidade)
+Foco: Pura memória muscular e velocidade de digitação.
+
+Jogabilidade: Comandos completos caem da tela, cada vez mais rápido. O jogador deve digitá-los exatamente como aparecem.
+
+Exemplos de Blocos:
+
+git pull origin main
+
+git rebase -i HEAD~3
+
+git log --oneline --graph
+
+5. Progressão e Engajamento
+Módulos de Nível: O jogo é dividido em "Mundos" que representam conceitos do Git, desbloqueados sequencialmente.
+
+Mundo 1: O Básico (init, add, commit, status)
+
+Mundo 2: Ramificações (branch, checkout, merge)
+
+Mundo 3: Trabalho Remoto (clone, push, pull, fetch)
+
+Mundo 4: Avançado (rebase, cherry-pick, stash)
+
+"Boss Fights": No final de cada Mundo, um desafio de "cenário real" que exige uma sequência de comandos corretos para ser resolvido.
+
+Exemplo de Chefe: "CONFLITO DE MERGE!"
+
+Solução: O jogador deve digitar (simuladamente) git status, (simular edição), git add ., e git commit na ordem correta para "derrotar" o conflito.
+
+Desbloqueáveis (Recompensas):
+
+Temas de Terminal: Os jogadores podem usar pontos para desbloquear novos esquemas de cores (ex: Solarized, Monokai, Hacker Verde).
+
+Sons de Teclado: Desbloquear diferentes "key-sounds" (ex: Som de Teclado Mecânico "Clicky", Som de Máquina de Escrever).
+
+6. Estilo Visual e Áudio (Art Direction)
+Visual: Minimalista, limpo, "retro-tech". Deve se parecer com um terminal moderno e estilizado.
+
+Fonte: Usar uma fonte monoespaçada (como Fira Code ou Roboto Mono).
+
+Feedback: Efeitos de partículas "glitchy" ou "pixelizadas" quando um comando é aceito. A linha de comando pisca. A tela treme levemente em caso de erro.
+
+Áudio (Sound Design):
+
+Música: Trilha sonora "Lo-fi" ou "Synthwave" de baixa intensidade, focada em concentração.
+
+SFX (Efeitos Sonoros):
+
+Sons de digitação (satisfatórios e rítmicos).
+
+Som de "Sucesso" (claro, positivo, tipo "ding").
+
+Som de "Falha" (curto, abafado, tipo "buzz").
+
+Som de "Combo" (um som que sobe de tom a cada acerto no combo).
