@@ -1,15 +1,19 @@
-import { Trophy, Zap, Target } from "lucide-react";
+import { Trophy, Target, BookOpen, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import terminalIcon from "@assets/generated_images/Terminal_icon_retro_style_e79f8591.png";
+import { GameMode } from "@shared/schema";
+
+type ModeScoreMap = Record<GameMode, number>;
 
 interface MainMenuProps {
-  onStartGame: (worldId: number) => void;
+  onSelectMode: (mode: GameMode) => void;
   onViewLeaderboard: () => void;
   highScore: number;
+  modeHighScores: ModeScoreMap;
 }
 
-export default function MainMenu({ onStartGame, onViewLeaderboard, highScore }: MainMenuProps) {
+export default function MainMenu({ onSelectMode, onViewLeaderboard, highScore, modeHighScores }: MainMenuProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines">
       <div className="max-w-4xl w-full space-y-8">
@@ -35,51 +39,73 @@ export default function MainMenu({ onStartGame, onViewLeaderboard, highScore }: 
           )}
         </div>
 
-        <div className="grid gap-4">
-          <Card className="hover-elevate cursor-pointer" onClick={() => onStartGame(1)} data-testid="card-world-1">
-            <CardHeader className="flex flex-row items-center gap-4">
-              <div className="p-3 rounded-md bg-primary/10">
-                <Target className="w-6 h-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <CardTitle>Mundo 1: O Básico</CardTitle>
-                <CardDescription>
-                  Aprenda os comandos fundamentais: init, add, commit, status
-                </CardDescription>
-              </div>
-              <Button variant="default" data-testid="button-start-world-1">
-                JOGAR
-              </Button>
-            </CardHeader>
-          </Card>
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-center">Escolha seu Modo de Jogo</h2>
+          
+          <div className="grid gap-4">
+            {/* Modo Normal */}
+            <Card className="hover-elevate cursor-pointer border-2 border-primary/50" onClick={() => onSelectMode("normal")} data-testid="card-mode-normal">
+              <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-md bg-primary/10">
+                  <Target className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle>Modo 1: Clássico</CardTitle>
+                  <CardDescription>
+                    Complete os desafios respondendo cenários do Git
+                  </CardDescription>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Recorde: <span className="font-semibold text-primary">{modeHighScores.normal || 0}</span>
+                  </p>
+                </div>
+                <Button variant="default" data-testid="button-start-normal">
+                  JOGAR
+                </Button>
+              </CardHeader>
+            </Card>
 
-          <Card className="opacity-60 cursor-not-allowed" data-testid="card-world-2">
-            <CardHeader className="flex flex-row items-center gap-4">
-              <div className="p-3 rounded-md bg-muted">
-                <Zap className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-muted-foreground">Mundo 2: Ramificações</CardTitle>
-                <CardDescription>
-                  Domine branches e merge (🔒 Bloqueado)
-                </CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
+            {/* Modo Dojo */}
+            <Card className="hover-elevate cursor-pointer border-2 border-blue-500/50" onClick={() => onSelectMode("dojo")} data-testid="card-mode-dojo">
+              <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-md bg-blue-500/10">
+                  <BookOpen className="w-6 h-6 text-blue-500" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-blue-600 dark:text-blue-400">Modo 2: Dojo de Sintaxe</CardTitle>
+                  <CardDescription>
+                    Preencha as lacunas nos comandos Git (Foco: Memorização)
+                  </CardDescription>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Recorde: <span className="font-semibold text-blue-500">{modeHighScores.dojo || 0}</span>
+                  </p>
+                </div>
+                <Button variant="outline" className="border-blue-500/50 text-blue-600 hover:bg-blue-500/10" data-testid="button-start-dojo">
+                  TREINAR
+                </Button>
+              </CardHeader>
+            </Card>
 
-          <Card className="opacity-60 cursor-not-allowed" data-testid="card-world-3">
-            <CardHeader className="flex flex-row items-center gap-4">
-              <div className="p-3 rounded-md bg-muted">
-                <Trophy className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-muted-foreground">Mundo 3: Trabalho Remoto</CardTitle>
-                <CardDescription>
-                  Colabore com repositórios remotos (🔒 Bloqueado)
-                </CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
+            {/* Modo Arcade */}
+            <Card className="hover-elevate cursor-pointer border-2 border-orange-500/50" onClick={() => onSelectMode("arcade")} data-testid="card-mode-arcade">
+              <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-md bg-orange-500/10">
+                  <Gauge className="w-6 h-6 text-orange-500" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-orange-600 dark:text-orange-400">Modo 3: Arcade (Velocidade)</CardTitle>
+                  <CardDescription>
+                    Digite comandos completos o mais rápido possível! �
+                  </CardDescription>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Recorde: <span className="font-semibold text-orange-500">{modeHighScores.arcade || 0}</span>
+                  </p>
+                </div>
+                <Button variant="outline" className="border-orange-500/50 text-orange-600 hover:bg-orange-500/10" data-testid="button-start-arcade">
+                  RUSH!
+                </Button>
+              </CardHeader>
+            </Card>
+          </div>
         </div>
 
         <div className="flex justify-center">

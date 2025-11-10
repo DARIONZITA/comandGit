@@ -7,7 +7,7 @@ export default function GameHUDExample() {
         score={15420}
         combo={5}
         lives={3}
-        maxLives={5}
+        maxLives={3}
         level={3}
         worldName="O Básico"
         isMuted={false}

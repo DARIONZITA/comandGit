@@ -1,7 +1,8 @@
-import { Trophy, RotateCcw, Home } from "lucide-react";
+import { Trophy, RotateCcw, Home, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import trophyIcon from "@assets/generated_images/Achievement_trophy_pixel_art_5d140558.png";
+import { ChallengeBlock } from "@shared/schema";
 
 interface GameOverModalProps {
   score: number;
@@ -10,6 +11,7 @@ interface GameOverModalProps {
   isNewHighScore: boolean;
   onRestart: () => void;
   onMainMenu: () => void;
+  failedChallenges?: ChallengeBlock[]; // Lista de desafios falhados
 }
 
 export default function GameOverModal({
@@ -18,7 +20,8 @@ export default function GameOverModal({
   highScore,
   isNewHighScore,
   onRestart,
-  onMainMenu
+  onMainMenu,
+  failedChallenges = []
 }: GameOverModalProps) {
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
@@ -62,6 +65,54 @@ export default function GameOverModal({
               <p className="text-sm text-muted-foreground">
                 Recorde Atual: <span className="font-bold text-foreground">{highScore.toLocaleString()}</span>
               </p>
+            </div>
+          )}
+
+          {/* Desafios Falhados */}
+          {failedChallenges.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="w-5 h-5" />
+                <h3 className="font-bold text-sm uppercase">Desafios que você errou:</h3>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {failedChallenges.map((challenge, index) => (
+                  <div key={challenge.id + index} className="p-3 bg-destructive/10 border border-destructive/20 rounded-md space-y-2">
+                    <p className="text-sm font-medium text-foreground">{challenge.scenario}</p>
+                    <div className="text-xs space-y-1">
+                      <p className="text-muted-foreground font-semibold">✅ Resposta correta:</p>
+                      {challenge.commandSequence && challenge.commandSequence.length > 1 ? (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground italic mb-1">
+                            Sequência de {challenge.commandSequence.length} comandos:
+                          </p>
+                          {challenge.commandSequence.map((cmd, i) => (
+                            <p key={i} className="font-mono text-green-600 dark:text-green-400 bg-muted px-2 py-1 rounded text-xs">
+                              {i + 1}. {cmd}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="font-mono text-green-600 dark:text-green-400 bg-muted px-2 py-1 rounded">
+                          {challenge.correctAnswer}
+                        </p>
+                      )}
+                      {(challenge.altAnswers && challenge.altAnswers.length > 0) && (
+                        <div className="mt-2">
+                          <p className="text-muted-foreground font-semibold">💡 Alternativas aceitas:</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {challenge.altAnswers.map((alt, i) => (
+                              <span key={i} className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
+                                {alt}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

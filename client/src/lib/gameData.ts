@@ -44,6 +44,21 @@ export const GAME_WORLDS: GameWorld[] = [
         altAnswers: ["git add -A", "git add --all"],
         points: 120,
         difficulty: 1
+      },
+      {
+        id: "1-6",
+        scenario: "Você criou 'index.html'. Adicione-o ao stage e depois faça commit com a mensagem 'Add homepage'.",
+        correctAnswer: "git add index.html", // Não usado quando há commandSequence
+        commandSequence: [
+          "git add index.html",
+          'git commit -m "Add homepage"'
+        ],
+        sequenceAltAnswers: [
+          ["git add .", "git add -A"], // Alternativas para o primeiro comando
+          ['git commit -m "Add homepage"', 'git commit -m "add homepage"'] // Alternativas para o segundo
+        ],
+        points: 250,
+        difficulty: 2
       }
     ]
   },
@@ -84,6 +99,23 @@ export const GAME_WORLDS: GameWorld[] = [
         altAnswers: ["git branch -a", "git branch --list"],
         points: 120,
         difficulty: 2
+      },
+      {
+        id: "2-5",
+        scenario: "Workflow completo: Crie a branch 'hotfix', adicione o arquivo 'patch.js', e faça commit com a mensagem 'Fix bug'.",
+        correctAnswer: "git checkout -b hotfix", // Não usado quando há commandSequence
+        commandSequence: [
+          "git checkout -b hotfix",
+          "git add patch.js",
+          'git commit -m "Fix bug"'
+        ],
+        sequenceAltAnswers: [
+          ["git switch -c hotfix", "git branch hotfix && git checkout hotfix"],
+          ["git add .", "git add -A"],
+          ['git commit -m "Fix bug"', 'git commit -m "fix bug"']
+        ],
+        points: 400,
+        difficulty: 3
       }
     ]
   },

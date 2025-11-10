@@ -96,10 +96,32 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "shake": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "10%, 30%, 50%, 70%, 90%": { transform: "translateX(-8px)" },
+          "20%, 40%, 60%, 80%": { transform: "translateX(8px)" },
+        },
+        "success-pulse": {
+          "0%, 100%": { 
+            transform: "scale(1)",
+            boxShadow: "0 0 0 0 rgba(34, 197, 94, 0.7)"
+          },
+          "50%": { 
+            transform: "scale(1.05)",
+            boxShadow: "0 0 0 10px rgba(34, 197, 94, 0)"
+          },
+        },
+        "fade-in": {
+          "0%": { opacity: "0", transform: "scale(0.9)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "shake": "shake 0.5s cubic-bezier(.36,.07,.19,.97) both",
+        "success-pulse": "success-pulse 0.6s ease-out",
+        "fade-in": "fade-in 0.3s ease-out",
       },
     },
   },
