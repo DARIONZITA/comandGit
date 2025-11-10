@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { Loader2, Users, Swords } from 'lucide-react';
+import { Users, Swords, Zap } from 'lucide-react';
 import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 interface MatchmakingScreenProps {
   isSearching: boolean;
@@ -26,79 +27,87 @@ export function MatchmakingScreen({ isSearching, onCancel }: MatchmakingScreenPr
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white p-4">
-      <div className="max-w-md w-full space-y-8 text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines">
+      <div className="max-w-2xl w-full space-y-8">
         {/* Ícone animado */}
-        <div className="relative w-32 h-32 mx-auto">
+        <div className="relative w-40 h-40 mx-auto mb-8">
           <div className="absolute inset-0 flex items-center justify-center">
-            <Swords className="w-16 h-16 text-yellow-400 animate-pulse" />
+            <Swords className="w-20 h-20 text-primary animate-pulse" />
           </div>
           <div className="absolute inset-0 pulse-circle">
-            <div className="w-full h-full rounded-full border-4 border-yellow-400 opacity-20"></div>
+            <div className="w-full h-full rounded-full border-4 border-primary opacity-20"></div>
           </div>
           <div className="absolute inset-4 pulse-circle">
-            <div className="w-full h-full rounded-full border-4 border-yellow-400 opacity-30"></div>
+            <div className="w-full h-full rounded-full border-4 border-primary opacity-30"></div>
           </div>
           <div className="absolute inset-8 pulse-circle">
-            <div className="w-full h-full rounded-full border-4 border-yellow-400 opacity-40"></div>
+            <div className="w-full h-full rounded-full border-4 border-primary opacity-40"></div>
           </div>
         </div>
 
         {/* Título */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
-            Procurando Oponente
+        <div className="text-center space-y-4">
+          <h1 className="text-6xl font-bold tracking-tight">
+            PROCURANDO
+            <br />
+            <span className="text-primary">OPONENTE</span>
           </h1>
-          <p className="text-gray-400 text-lg">
+          <p className="text-xl text-muted-foreground">
             Preparando uma batalha épica...
           </p>
         </div>
 
         {/* Animação de loading */}
-        <div className="flex items-center justify-center space-x-2 py-8">
-          <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
-          <span className="text-xl font-semibold">
+        <div className="flex items-center justify-center space-x-3 py-8">
+          <Zap className="w-8 h-8 text-primary animate-pulse" />
+          <span className="text-2xl font-bold font-mono">
             <span className="inline-block animate-pulse">.</span>
             <span className="inline-block animate-pulse animation-delay-200">.</span>
             <span className="inline-block animate-pulse animation-delay-400">.</span>
           </span>
         </div>
 
-        {/* Informações */}
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 border border-gray-700">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Users className="w-5 h-5 text-blue-400" />
-            <span className="text-sm text-gray-300">Sistema de Matchmaking Ativo</span>
-          </div>
-          
-          <div className="space-y-3 text-sm text-gray-400">
-            <div className="flex items-start space-x-2">
-              <span className="text-green-400">✓</span>
-              <p className="text-left">Conectando com jogadores do mesmo nível</p>
+        {/* Card de informações */}
+        <Card className="hover-elevate border-2 border-primary/20">
+          <CardHeader>
+            <div className="flex items-center justify-center space-x-2 mb-2">
+              <Users className="w-5 h-5 text-primary" />
+              <CardTitle className="text-lg">Sistema de Matchmaking Ativo</CardTitle>
             </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-green-400">✓</span>
-              <p className="text-left">Desafios aleatórios preparados</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-start space-x-3">
+                <span className="text-primary font-bold">✓</span>
+                <p className="text-left text-muted-foreground">Conectando com jogadores do mesmo nível</p>
+              </div>
+              <div className="flex items-start space-x-3">
+                <span className="text-primary font-bold">✓</span>
+                <p className="text-left text-muted-foreground">Desafios aleatórios preparados</p>
+              </div>
+              <div className="flex items-start space-x-3">
+                <span className="text-primary font-bold">✓</span>
+                <p className="text-left text-muted-foreground">Sistema de pontuação competitivo ativo</p>
+              </div>
             </div>
-            <div className="flex items-start space-x-2">
-              <span className="text-green-400">✓</span>
-              <p className="text-left">Sistema de pontuação competitivo ativo</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Dica */}
-        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-          <p className="text-sm text-yellow-200">
-            💡 <strong>Dica:</strong> Prepare-se! A batalha começa assim que encontrarmos um oponente.
-          </p>
-        </div>
+        <Card className="border-2 border-primary/30 bg-primary/5">
+          <CardContent className="pt-6">
+            <p className="text-sm text-center">
+              💡 <strong>Dica:</strong> Prepare-se! A batalha começa assim que encontrarmos um oponente.
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Botão cancelar */}
         <Button
           onClick={onCancel}
           variant="outline"
-          className="w-full border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+          size="lg"
+          className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
         >
           Cancelar Busca
         </Button>

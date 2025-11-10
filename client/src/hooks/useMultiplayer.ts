@@ -32,8 +32,11 @@ export interface MatchState {
 }
 
 export interface OpponentActivity {
-  typing: boolean;
-  lastEventTime: number;
+  inputLength: number;
+  lastSubmission: {
+    result: 'correct' | 'wrong';
+    timestamp: number;
+  } | null;
 }
 
 export function useMultiplayer() {
@@ -42,14 +45,16 @@ export function useMultiplayer() {
   const [matchState, setMatchState] = useState<MatchState | null>(null);
   const [challenges, setChallenges] = useState<MultiplayerChallenge[]>([]);
   const [opponentActivity, setOpponentActivity] = useState<OpponentActivity>({
-    typing: false,
-    lastEventTime: 0,
+    inputLength: 0,
+    lastSubmission: null,
   });
   const [timeRemaining, setTimeRemaining] = useState<number>(120);
   
   const matchChannelRef = useRef<RealtimeChannel | null>(null);
   const queueChannelRef = useRef<RealtimeChannel | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const waitingRefetchRef = useRef<NodeJS.Timeout | null>(null);
 
   // Gerar desafios aleatórios
   const generateRandomChallenges = useCallback(() => {
@@ -99,153 +104,318 @@ export function useMultiplayer() {
     return allChallenges.sort(() => Math.random() - 0.5);
   }, []);
 
-  // Entrar na fila de matchmaking
+  // Entrar na fila de matchmaking (RPC atômico + fallback)
   const joinQueue = useCallback(async () => {
     if (!user) return;
 
     try {
+      console.log('[Multiplayer] 🚀 joinQueue start, user.id:', user.id);
       setIsSearching(true);
 
-      // Limpar entradas antigas primeiro
-      await supabase.rpc('cleanup_old_queue_entries');
+      // Primeiro tentar pegar username da tabela user_stats (onde realmente está!)
+      const { data: userStats, error: statsError } = await supabase
+        .from('user_stats')
+        .select('username')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      // Verificar se já existe alguém esperando
-      const { data: waitingPlayers, error: fetchError } = await supabase
+      console.log('[Multiplayer] 📊 user_stats query:', { userStats, statsError });
+
+      let username = userStats?.username;
+
+      // Se não encontrou em user_stats, tentar outras fontes
+      if (!username) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (userData?.username) {
+          username = userData.username;
+        } else {
+          // Fallback para metadata ou email
+          username = user.user_metadata?.display_name
+            || user.user_metadata?.username
+            || user.user_metadata?.full_name
+            || (user.email ? user.email.split('@')[0] : null)
+            || `Jogador${user.id.slice(-4)}`;
+        }
+      }
+
+      console.log('[Multiplayer] 👤 Username final para fila:', username);
+
+      // Limpar entradas antigas e garantir estado limpo do usuário
+      await supabase.rpc('cleanup_old_queue_entries');
+      await supabase.from('multiplayer_queue').delete().eq('user_id', user.id);
+      
+      // Limpar matches antigas/travadas do usuário
+      await supabase
+        .from('multiplayer_matches')
+        .delete()
+        .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
+        .in('status', ['waiting', 'finished']);
+
+      // Inserir própria entrada na fila com username correto
+      console.log('[Multiplayer] 📝 Inserindo na fila:', { user_id: user.id, username, status: 'waiting' });
+      const { data: insertedRow, error: insertSelfError } = await supabase
+        .from('multiplayer_queue')
+        .insert({ user_id: user.id, username, status: 'waiting' })
+        .select()
+        .single();
+      
+      if (insertSelfError) {
+        console.error('[Multiplayer] ❌ Erro ao inserir na fila:', insertSelfError);
+        throw insertSelfError;
+      }
+      
+      console.log('[Multiplayer] ✅ Inserido na fila:', insertedRow);
+
+      // Ver se já existe um oponente aguardando
+      const { data: opponentRow } = await supabase
         .from('multiplayer_queue')
         .select('*')
         .eq('status', 'waiting')
         .neq('user_id', user.id)
         .order('created_at', { ascending: true })
-        .limit(1);
+        .limit(1)
+        .maybeSingle();
 
-      if (fetchError) throw fetchError;
-
-      if (waitingPlayers && waitingPlayers.length > 0) {
-        // Encontrou um oponente! Criar partida
-        const opponent = waitingPlayers[0];
+      if (opponentRow) {
+        console.log('[Multiplayer] 🤝 Opponent found in queue, trying to create match vs', opponentRow.user_id);
+        console.log('[Multiplayer] 🤝 Opponent data:', opponentRow);
         
-        // Marcar ambos como matched
-        await supabase
-          .from('multiplayer_queue')
-          .update({ status: 'matched' })
-          .in('user_id', [user.id, opponent.user_id]);
+        const { data: newMatch, error: rpcError } = await supabase
+          .rpc('create_match_and_mark_queue', { opponent_id: opponentRow.user_id });
+        
+        if (rpcError) {
+          console.warn('[Multiplayer] create_match RPC error', rpcError);
+          // Se a partida já existe (corrida), buscar ela
+          if (rpcError.code === 'P0001' && rpcError.message?.includes('Match already exists')) {
+            const { data: existingMatch } = await supabase
+              .from('multiplayer_matches')
+              .select('*')
+              .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
+              .or(`player1_id.eq.${opponentRow.user_id},player2_id.eq.${opponentRow.user_id}`)
+              .eq('status', 'waiting')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
 
-        // Criar partida
-        const { data: newMatch, error: matchError } = await supabase
-          .from('multiplayer_matches')
-          .insert({
-            player1_id: opponent.user_id,
-            player1_username: opponent.username,
-            player2_id: user.id,
-            player2_username: user.user_metadata?.username || 'Player',
-            status: 'waiting',
-          })
-          .select()
-          .single();
+            console.log('[Multiplayer] 🔍 Existing match found:', existingMatch);
 
-        if (matchError) throw matchError;
+            if (existingMatch) {
+              // Limpar qualquer entrada restante na fila
+              await supabase.from('multiplayer_queue').delete().eq('user_id', user.id);
+              
+              // IMPORTANTE: Atualizar os usernames da match existente com os da fila atual!
+              const isPlayer1InExisting = existingMatch.player1_id === user.id;
+              const updateData = isPlayer1InExisting 
+                ? { player1_username: username, player2_username: opponentRow.username }
+                : { player1_username: opponentRow.username, player2_username: username };
+              
+              console.log('[Multiplayer] 🔄 Atualizando usernames da match:', updateData);
+              
+              await supabase
+                .from('multiplayer_matches')
+                .update(updateData)
+                .eq('id', existingMatch.id);
+              
+              // Buscar a match atualizada
+              const { data: updatedMatch } = await supabase
+                .from('multiplayer_matches')
+                .select('*')
+                .eq('id', existingMatch.id)
+                .single();
+              
+              console.log('[Multiplayer] ✅ Match com usernames atualizados:', updatedMatch);
+              
+              setMatchState({
+                id: updatedMatch.id,
+                player1: {
+                  id: updatedMatch.player1_id,
+                  username: updatedMatch.player1_username,
+                  score: updatedMatch.player1_score || 0,
+                  currentChallenge: updatedMatch.player1_current_challenge || 0,
+                  isReady: updatedMatch.player1_is_ready || false,
+                },
+                player2: {
+                  id: updatedMatch.player2_id,
+                  username: updatedMatch.player2_username,
+                  score: updatedMatch.player2_score || 0,
+                  currentChallenge: updatedMatch.player2_current_challenge || 0,
+                  isReady: updatedMatch.player2_is_ready || false,
+                },
+                status: updatedMatch.status,
+                gameDuration: updatedMatch.game_duration,
+                scoreLimit: updatedMatch.score_limit,
+              });
+              setChallenges(generateRandomChallenges());
+              setIsSearching(false);
+              return;
+            }
+          }
+          // Outros erros (400), seguir com listeners + polling: alguém pode criar a match
+          console.info('[Multiplayer] Continuing with listeners + polling after RPC error');
+        }
+        if (!newMatch) throw new Error('RPC não retornou partida');
 
-        // Configurar o estado da partida
+        console.log('[Multiplayer] ✅ Match criada:', {
+          id: newMatch.id,
+          player1: newMatch.player1_username,
+          player2: newMatch.player2_username
+        });
+
         setMatchState({
           id: newMatch.id,
           player1: {
             id: newMatch.player1_id,
             username: newMatch.player1_username,
-            score: 0,
-            currentChallenge: 0,
-            isReady: false,
+            score: newMatch.player1_score || 0,
+            currentChallenge: newMatch.player1_current_challenge || 0,
+            isReady: newMatch.player1_is_ready || false,
           },
           player2: {
             id: newMatch.player2_id,
             username: newMatch.player2_username,
-            score: 0,
-            currentChallenge: 0,
-            isReady: false,
+            score: newMatch.player2_score || 0,
+            currentChallenge: newMatch.player2_current_challenge || 0,
+            isReady: newMatch.player2_is_ready || false,
           },
-          status: 'waiting',
+          status: newMatch.status,
           gameDuration: newMatch.game_duration,
           scoreLimit: newMatch.score_limit,
         });
 
-        // Gerar desafios
         setChallenges(generateRandomChallenges());
-        
         setIsSearching(false);
-      } else {
-        // Não encontrou ninguém, entrar na fila
-        const { error: insertError } = await supabase
-          .from('multiplayer_queue')
-          .insert({
-            user_id: user.id,
-            username: user.user_metadata?.username || 'Player',
-            status: 'waiting',
-          });
-
-        if (insertError) throw insertError;
-
-        // Inscrever-se no canal da fila para ser notificado quando houver match
-        queueChannelRef.current = supabase
-          .channel('multiplayer_queue')
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'multiplayer_queue',
-            },
-            async (payload) => {
-              // Novo jogador entrou na fila, verificar match
-              const newPlayer = payload.new as any;
-              if (newPlayer.user_id !== user.id && newPlayer.status === 'waiting') {
-                // Criar partida com este jogador
-                await supabase
-                  .from('multiplayer_queue')
-                  .update({ status: 'matched' })
-                  .in('user_id', [user.id, newPlayer.user_id]);
-
-                const { data: newMatch, error: matchError } = await supabase
-                  .from('multiplayer_matches')
-                  .insert({
-                    player1_id: user.id,
-                    player1_username: user.user_metadata?.username || 'Player',
-                    player2_id: newPlayer.user_id,
-                    player2_username: newPlayer.username,
-                    status: 'waiting',
-                  })
-                  .select()
-                  .single();
-
-                if (!matchError && newMatch) {
-                  setMatchState({
-                    id: newMatch.id,
-                    player1: {
-                      id: newMatch.player1_id,
-                      username: newMatch.player1_username,
-                      score: 0,
-                      currentChallenge: 0,
-                      isReady: false,
-                    },
-                    player2: {
-                      id: newMatch.player2_id,
-                      username: newMatch.player2_username,
-                      score: 0,
-                      currentChallenge: 0,
-                      isReady: false,
-                    },
-                    status: 'waiting',
-                    gameDuration: newMatch.game_duration,
-                    scoreLimit: newMatch.score_limit,
-                  });
-
-                  setChallenges(generateRandomChallenges());
-                  setIsSearching(false);
-                  queueChannelRef.current?.unsubscribe();
-                }
-              }
-            }
-          )
-          .subscribe();
+        return;
       }
+
+      // Sem oponente imediato: configurar listeners e polling
+      console.log('[Multiplayer] ⏳ No opponent yet, setting up listeners and polling...');
+      const handleMatchInsert = async (payload: any) => {
+        const newMatch = payload.new as any;
+        if (newMatch.player1_id !== user.id && newMatch.player2_id !== user.id) {
+          return;
+        }
+
+        const { data: match } = await supabase
+          .from('multiplayer_matches')
+          .select('*')
+          .eq('id', newMatch.id)
+          .single();
+        if (!match) {
+          return;
+        }
+
+        setMatchState({
+          id: match.id,
+          player1: {
+            id: match.player1_id,
+            username: match.player1_username,
+            score: match.player1_score || 0,
+            currentChallenge: match.player1_current_challenge || 0,
+            isReady: match.player1_is_ready || false,
+          },
+          player2: {
+            id: match.player2_id,
+            username: match.player2_username,
+            score: match.player2_score || 0,
+            currentChallenge: match.player2_current_challenge || 0,
+            isReady: match.player2_is_ready || false,
+          },
+          status: match.status,
+          gameDuration: match.game_duration,
+          scoreLimit: match.score_limit,
+        });
+
+        setChallenges(generateRandomChallenges());
+        setIsSearching(false);
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
+        }
+        queueChannelRef.current?.unsubscribe();
+      };
+
+      queueChannelRef.current = supabase
+        .channel(`queue:${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'multiplayer_queue' },
+          async (payload) => {
+            const newPlayer = payload.new as any;
+            if (newPlayer.user_id === user.id || newPlayer.status !== 'waiting') {
+              return;
+            }
+            const { error: rpcErr } = await supabase.rpc('create_match_and_mark_queue', { opponent_id: newPlayer.user_id });
+            // ignora erros de corrida
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'multiplayer_matches', filter: `player1_id=eq.${user.id}` },
+          handleMatchInsert
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'multiplayer_matches', filter: `player2_id=eq.${user.id}` },
+          handleMatchInsert
+        )
+        .subscribe();
+
+      // Fallback polling
+      pollIntervalRef.current = setInterval(async () => {
+        try {
+          const { data: match } = await supabase
+            .from('multiplayer_matches')
+            .select('*')
+            .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
+            .eq('status', 'waiting')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (match) {
+            console.log('[Multiplayer] 🎯 Polling found match:', match.id);
+            console.log('[Multiplayer] 🎯 Match details:', {
+              player1: { id: match.player1_id, username: match.player1_username },
+              player2: { id: match.player2_id, username: match.player2_username }
+            });
+            
+            setMatchState({
+              id: match.id,
+              player1: {
+                id: match.player1_id,
+                username: match.player1_username,
+                score: match.player1_score || 0,
+                currentChallenge: match.player1_current_challenge || 0,
+                isReady: match.player1_is_ready || false,
+              },
+              player2: {
+                id: match.player2_id,
+                username: match.player2_username,
+                score: match.player2_score || 0,
+                currentChallenge: match.player2_current_challenge || 0,
+                isReady: match.player2_is_ready || false,
+              },
+              status: match.status,
+              gameDuration: match.game_duration,
+              scoreLimit: match.score_limit,
+            });
+
+            setChallenges(generateRandomChallenges());
+            setIsSearching(false);
+            if (queueChannelRef.current) queueChannelRef.current.unsubscribe();
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+          }
+        } catch {}
+      }, 2000);
+      console.log('[Multiplayer] 🔄 Starting polling fallback (2s interval)');
     } catch (error) {
       console.error('Error joining queue:', error);
       setIsSearching(false);
@@ -263,6 +433,10 @@ export function useMultiplayer() {
         .eq('user_id', user.id);
 
       queueChannelRef.current?.unsubscribe();
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
       setIsSearching(false);
     } catch (error) {
       console.error('Error leaving queue:', error);
@@ -274,46 +448,86 @@ export function useMultiplayer() {
     if (!matchState || !user) return;
 
     try {
-      const isPlayer1 = matchState.player1.id === user.id;
-      
-      await supabase
-        .from('multiplayer_matches')
-        .update({
-          [isPlayer1 ? 'player1_is_ready' : 'player2_is_ready']: true,
-        })
-        .eq('id', matchState.id);
+      console.log('[Multiplayer] 🟢 Marking ready for match:', matchState.id);
+      // Chamar RPC atômica que marca pronto e inicia se ambos estiverem prontos
+      const { data: updated, error: rerr } = await supabase.rpc('mark_ready_and_start', { p_match_id: matchState.id });
+      if (rerr) {
+        console.error('[Multiplayer] mark_ready RPC error', rerr);
+      }
 
-      // Atualizar estado local
-      setMatchState(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          [isPlayer1 ? 'player1' : 'player2']: {
-            ...prev[isPlayer1 ? 'player1' : 'player2'],
-            isReady: true,
-          },
-        };
+      console.log('[Multiplayer] 🔍 RPC Response:', {
+        hasData: !!updated,
+        status: updated?.status,
+        started_at: updated?.started_at,
+        player1_is_ready: updated?.player1_is_ready,
+        player2_is_ready: updated?.player2_is_ready
       });
+
+      // Ajustar estado local imediatamente (além do realtime)
+      if (updated) {
+        setMatchState(prev => {
+          if (!prev) return prev;
+          const newState = {
+            ...prev,
+            player1: {
+              ...prev.player1,
+              isReady: !!updated.player1_is_ready,
+              score: updated.player1_score ?? prev.player1.score,
+              currentChallenge: updated.player1_current_challenge ?? prev.player1.currentChallenge,
+            },
+            player2: {
+              ...prev.player2,
+              isReady: !!updated.player2_is_ready,
+              score: updated.player2_score ?? prev.player2.score,
+              currentChallenge: updated.player2_current_challenge ?? prev.player2.currentChallenge,
+            },
+            status: updated.status,
+            startedAt: updated.started_at ?? prev.startedAt,
+          };
+          console.log('[Multiplayer] 🔄 State update:', {
+            prevStatus: prev.status,
+            newStatus: newState.status,
+            prevStartedAt: prev.startedAt,
+            newStartedAt: newState.startedAt,
+            updatedStartedAt: updated.started_at
+          });
+          return newState;
+        });
+        console.log('[Multiplayer] ✅ Ready state updated:', updated);
+      } else {
+        // Sem retorno? Forçar refetch
+        console.log('[Multiplayer] ℹ️ No updated match returned, forcing refetch');
+        const { data: refetched } = await supabase
+          .from('multiplayer_matches')
+          .select('*')
+          .eq('id', matchState.id)
+          .single();
+        if (refetched) {
+          setMatchState(prev => prev ? ({
+            ...prev,
+            player1: { ...prev.player1, isReady: refetched.player1_is_ready, score: refetched.player1_score, currentChallenge: refetched.player1_current_challenge },
+            player2: { ...prev.player2, isReady: refetched.player2_is_ready, score: refetched.player2_score, currentChallenge: refetched.player2_current_challenge },
+            status: refetched.status,
+            startedAt: refetched.started_at,
+          }) : prev);
+        }
+      }
     } catch (error) {
       console.error('Error setting ready:', error);
     }
   }, [matchState, user]);
 
-  // Enviar evento de digitação
-  const sendTypingEvent = useCallback(async () => {
+  // Enviar evento de digitação (sem logs verbosos)
+  const sendTypingEvent = useCallback(async (inputLength: number) => {
     if (!matchState || !user) return;
-
     try {
-      await supabase
-        .from('multiplayer_events')
-        .insert({
-          match_id: matchState.id,
-          user_id: user.id,
-          event_type: 'typing',
-        });
-    } catch (error) {
-      console.error('Error sending typing event:', error);
-    }
+      await supabase.from('multiplayer_events').insert({
+        match_id: matchState.id,
+        user_id: user.id,
+        event_type: 'typing',
+        payload: { inputLength }
+      });
+    } catch {}
   }, [matchState, user]);
 
   // Submeter resposta
@@ -336,8 +550,8 @@ export function useMultiplayer() {
       let newChallengeIndex = currentPlayer.currentChallenge;
       let opponentScore = isPlayer1 ? matchState.player2.score : matchState.player1.score;
 
+      // Avançar sempre para próximo desafio (mesmo em erro) para manter ritmo
       if (isCorrect) {
-        // Resposta correta: +1 ponto, próximo desafio
         newScore += 1;
         newChallengeIndex += 1;
 
@@ -347,10 +561,11 @@ export function useMultiplayer() {
             match_id: matchState.id,
             user_id: user.id,
             event_type: 'submit_correct',
+            payload: { result: 'correct' },
           });
       } else {
-        // Resposta errada: oponente ganha +1 ponto
-        opponentScore += 1;
+        opponentScore += 1; // oponente ganha ponto
+        newChallengeIndex += 1; // segue para próximo desafio mesmo errando
 
         await supabase
           .from('multiplayer_events')
@@ -358,6 +573,7 @@ export function useMultiplayer() {
             match_id: matchState.id,
             user_id: user.id,
             event_type: 'submit_wrong',
+            payload: { result: 'wrong' },
           });
       }
 
@@ -409,6 +625,36 @@ export function useMultiplayer() {
     }
   }, [matchState, user, challenges, timeRemaining]);
 
+  // Fallback polling para eventos caso realtime falhe (checa último evento adversário)
+  useEffect(() => {
+    if (!matchState || matchState.status !== 'active' || !user) return;
+    let stop = false;
+    const interval = setInterval(async () => {
+      if (stop) return;
+      try {
+        // Buscar o evento mais recente do oponente
+        const { data: events } = await supabase
+          .from('multiplayer_events')
+          .select('id,event_type,payload,created_at,user_id')
+          .eq('match_id', matchState.id)
+          .neq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        if (events && events.length) {
+          const ev = events[0] as any;
+          // Atualizar apenas se for novo em relação ao que temos (timestamp simples)
+          if (ev.event_type === 'typing' && ev.payload?.inputLength !== undefined) {
+            setOpponentActivity(prev => ({ ...prev, inputLength: ev.payload.inputLength }));
+          } else if (ev.event_type === 'submit_correct' || ev.event_type === 'submit_wrong') {
+            const result = ev.event_type === 'submit_correct' ? 'correct' : 'wrong';
+            setOpponentActivity({ inputLength: 0, lastSubmission: { result, timestamp: Date.now() } });
+          }
+        }
+      } catch {}
+    }, 800); // intervalo curto para sensação de tempo real
+    return () => { stop = true; clearInterval(interval); };
+  }, [matchState?.id, matchState?.status, user]);
+
   // Inscrever-se em atualizações da partida em tempo real
   useEffect(() => {
     if (!matchState) return;
@@ -450,13 +696,7 @@ export function useMultiplayer() {
             };
           });
 
-          // Iniciar timer quando ambos estiverem prontos
-          if (updated.status === 'active' && !updated.started_at) {
-            supabase
-              .from('multiplayer_matches')
-              .update({ started_at: new Date().toISOString() })
-              .eq('id', matchState.id);
-          }
+          // started_at agora é controlado no setReady quando ambos estão prontos
         }
       )
       .on(
@@ -472,80 +712,211 @@ export function useMultiplayer() {
           
           // Atualizar atividade do oponente
           if (event.user_id !== user?.id) {
-            if (event.event_type === 'typing') {
-              setOpponentActivity({
-                typing: true,
-                lastEventTime: Date.now(),
-              });
+            if (event.event_type === 'typing' && event.payload?.inputLength !== undefined) {
+              setOpponentActivity(prev => ({
+                ...prev,
+                inputLength: event.payload.inputLength,
+              }));
             } else if (event.event_type === 'submit_correct' || event.event_type === 'submit_wrong') {
-              setOpponentActivity({
-                typing: false,
-                lastEventTime: Date.now(),
-              });
+              const result = event.event_type === 'submit_correct' ? 'correct' : 'wrong';
+              setOpponentActivity(prev => ({
+                inputLength: 0,
+                lastSubmission: {
+                  result,
+                  timestamp: Date.now(),
+                },
+              }));
             }
           }
         }
       )
       .subscribe();
 
+    // Refetch inicial para garantir sync após assinar o canal
+    (async () => {
+      try {
+        const { data: m } = await supabase
+          .from('multiplayer_matches')
+          .select('*')
+          .eq('id', matchState.id)
+          .single();
+        if (m) {
+          setMatchState(prev => prev ? ({
+            ...prev,
+            player1: { ...prev.player1, score: m.player1_score, currentChallenge: m.player1_current_challenge, isReady: m.player1_is_ready },
+            player2: { ...prev.player2, score: m.player2_score, currentChallenge: m.player2_current_challenge, isReady: m.player2_is_ready },
+            status: m.status,
+            winnerId: m.winner_id,
+            winnerReason: m.winner_reason,
+            startedAt: m.started_at,
+            finishedAt: m.finished_at,
+          }) : prev);
+        }
+      } catch (e) {
+        console.warn('[Multiplayer] initial refetch after subscribe failed', e);
+      }
+    })();
+
     return () => {
       matchChannelRef.current?.unsubscribe();
     };
   }, [matchState, user]);
 
+  // Enquanto a partida estiver em "waiting", fazer refetch a cada 1s para não depender só do realtime
+  useEffect(() => {
+    if (!matchState || matchState.status !== 'waiting') {
+      if (waitingRefetchRef.current) {
+        clearInterval(waitingRefetchRef.current);
+        waitingRefetchRef.current = null;
+      }
+      return;
+    }
+
+    waitingRefetchRef.current = setInterval(async () => {
+      try {
+        const { data: m } = await supabase
+          .from('multiplayer_matches')
+          .select('*')
+          .eq('id', matchState.id)
+          .single();
+        if (!m) return;
+        if (
+          m.player1_is_ready !== matchState.player1.isReady ||
+          m.player2_is_ready !== matchState.player2.isReady ||
+          m.status !== matchState.status
+        ) {
+          setMatchState(prev => prev ? ({
+            ...prev,
+            player1: { ...prev.player1, isReady: m.player1_is_ready, score: m.player1_score, currentChallenge: m.player1_current_challenge },
+            player2: { ...prev.player2, isReady: m.player2_is_ready, score: m.player2_score, currentChallenge: m.player2_current_challenge },
+            status: m.status,
+            startedAt: m.started_at ?? prev.startedAt,
+          }) : prev);
+          if (m.status === 'active' && waitingRefetchRef.current) {
+            clearInterval(waitingRefetchRef.current);
+            waitingRefetchRef.current = null;
+          }
+        }
+      } catch {}
+    }, 1000);
+
+    return () => {
+      if (waitingRefetchRef.current) {
+        clearInterval(waitingRefetchRef.current);
+        waitingRefetchRef.current = null;
+      }
+    };
+  }, [matchState]);
+
   // Timer do jogo
   useEffect(() => {
-    if (matchState?.status === 'active' && matchState.startedAt) {
-      const startTime = new Date(matchState.startedAt).getTime();
+    const status = matchState?.status;
+    const startedAt = matchState?.startedAt;
+    const gameDuration = matchState?.gameDuration;
+
+    console.log('[Multiplayer] 🔍 Verificando condições do timer:', {
+      status,
+      startedAt,
+      shouldStart: status === 'active' && !!startedAt
+    });
+
+    if (status === 'active' && startedAt && gameDuration) {
+      console.log('[Multiplayer] ⏱️ Timer iniciado:', {
+        startedAt,
+        duration: gameDuration
+      });
+      
+      const startTime = new Date(startedAt).getTime();
+      
+      console.log('[Multiplayer] 🕐 Configurando intervalo do timer. startTime:', new Date(startTime).toISOString());
       
       timerRef.current = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        const remaining = Math.max(0, matchState.gameDuration - elapsed);
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        const remaining = Math.max(0, gameDuration - elapsed);
+        
+        console.log('[Multiplayer] ⏱️ Timer tick:', {
+          now: new Date(now).toISOString(),
+          elapsed,
+          remaining,
+          gameDuration: gameDuration
+        });
         
         setTimeRemaining(remaining);
 
         // Terminar jogo quando o tempo acabar
-        if (remaining === 0) {
-          const isPlayer1 = matchState.player1.id === user?.id;
-          const myScore = isPlayer1 ? matchState.player1.score : matchState.player2.score;
-          const opponentScore = isPlayer1 ? matchState.player2.score : matchState.player1.score;
-          const winnerId = myScore > opponentScore 
-            ? user?.id 
-            : (isPlayer1 ? matchState.player2.id : matchState.player1.id);
+        if (remaining === 0 && timerRef.current) {
+          console.log('[Multiplayer] ⏰ Tempo esgotado! Calculando vencedor...');
+          
+          // Acessar o estado mais recente para o cálculo do vencedor
+          setMatchState(currentMatchState => {
+            if (!currentMatchState) return null;
 
-          supabase
-            .from('multiplayer_matches')
-            .update({
-              status: 'finished',
-              winner_id: winnerId,
-              winner_reason: 'timeout',
-              finished_at: new Date().toISOString(),
-            })
-            .eq('id', matchState.id);
+            const player1Score = currentMatchState.player1.score;
+            const player2Score = currentMatchState.player2.score;
+            
+            let winnerId: string;
+            if (player1Score > player2Score) {
+              winnerId = currentMatchState.player1.id;
+            } else if (player2Score > player1Score) {
+              winnerId = currentMatchState.player2.id;
+            } else {
+              winnerId = currentMatchState.player1.id; // Empate vai para P1
+            }
 
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-          }
+            console.log('[Multiplayer] 🏆 Vencedor por timeout:', {
+              winnerId,
+              player1: { id: currentMatchState.player1.id, score: player1Score },
+              player2: { id: currentMatchState.player2.id, score: player2Score }
+            });
+
+            supabase
+              .from('multiplayer_matches')
+              .update({
+                status: 'finished',
+                winner_id: winnerId,
+                winner_reason: 'timeout',
+                finished_at: new Date().toISOString(),
+              })
+              .eq('id', currentMatchState.id)
+              .then(() => {
+                console.log('[Multiplayer] ✅ Match finalizada por timeout');
+              });
+            
+            return currentMatchState; // não mudar o estado aqui, deixar o realtime fazer
+          });
+
+          clearInterval(timerRef.current);
+          timerRef.current = null;
         }
       }, 1000);
 
       return () => {
         if (timerRef.current) {
+          console.log('[Multiplayer] 🧹 Limpando timer.');
           clearInterval(timerRef.current);
+          timerRef.current = null;
         }
       };
+    } else {
+      console.log('[Multiplayer] ⏱️ Timer não iniciado ou parado.');
+       if (timerRef.current) {
+          console.log('[Multiplayer] 🧹 Limpando timer porque as condições não são mais atendidas.');
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
     }
-  }, [matchState, user]);
+  }, [matchState?.status, matchState?.startedAt, matchState?.gameDuration]);
 
-  // Limpar typing indicator após 500ms
+  // Limpar lastSubmission após 3 segundos
   useEffect(() => {
-    if (opponentActivity.typing) {
+    if (opponentActivity.lastSubmission) {
       const timeout = setTimeout(() => {
-        setOpponentActivity(prev => ({ ...prev, typing: false }));
-      }, 500);
+        setOpponentActivity(prev => ({ ...prev, lastSubmission: null }));
+      }, 3000);
       return () => clearTimeout(timeout);
     }
-  }, [opponentActivity.lastEventTime]);
+  }, [opponentActivity.lastSubmission]);
 
   // Cleanup ao desmontar
   useEffect(() => {
@@ -554,6 +925,14 @@ export function useMultiplayer() {
       matchChannelRef.current?.unsubscribe();
       if (timerRef.current) {
         clearInterval(timerRef.current);
+      }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      if (waitingRefetchRef.current) {
+        clearInterval(waitingRefetchRef.current);
+        waitingRefetchRef.current = null;
       }
     };
   }, []);

@@ -5,6 +5,7 @@ import type { GameSounds } from "@/hooks/useGameSounds";
 
 interface CommandInputProps {
   onSubmit: (command: string) => void;
+  onInputChange?: (value: string) => void;
   disabled?: boolean;
   shake?: boolean;
   currentBranch?: string;
@@ -13,7 +14,8 @@ interface CommandInputProps {
 }
 
 export default function CommandInput({ 
-  onSubmit, 
+  onSubmit,
+  onInputChange,
   disabled, 
   shake, 
   currentBranch = "main",
@@ -38,7 +40,14 @@ export default function CommandInput({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(e.target.value);
+    const newValue = e.target.value;
+    setValue(newValue);
+    
+    // Notificar o pai sobre a mudança
+    if (onInputChange) {
+      onInputChange(newValue);
+    }
+    
     // Toca som de digitação
     if (sounds?.playKeyPress) {
       sounds.playKeyPress();

@@ -188,6 +188,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ========== ROTAS DO NOVO SISTEMA DE DESAFIOS ==========
+  // ===== DEBUG MULTIPLAYER =====
+  // Endpoint para inspeção rápida do estado da fila e partidas envolvendo o usuário autenticado
+  app.get('/api/multiplayer/debug-state', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      // Este endpoint assume que o cliente já tem sessão supabase e envia o user id como query
+      const userId = (req.query.user_id as string) || 'unknown';
+      const now = new Date().toISOString();
+      console.log(`[MP_DEBUG ${now}] solicitando estado para user ${userId}`);
+
+      const { data: queueEntries, error: qErr } = await supabase
+        .from('multiplayer_queue')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (qErr) throw qErr;
+
+      const { data: waitingMatches, error: wErr } = await supabase
+        .from('multiplayer_matches')
+        .select('*')
+        .eq('status', 'waiting')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (wErr) throw wErr;
+
+      const { data: activeMatches, error: aErr } = await supabase
+        .from('multiplayer_matches')
+        .select('*')
+        .eq('status', 'active')
+        .order('started_at', { ascending: false })
+        .limit(5);
+      if (aErr) throw aErr;
+
+      // Procurar partidas específicas do usuário (qualquer status)
+      const { data: userMatches, error: uErr } = await supabase
+        .from('multiplayer_matches')
+        .select('*')
+        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (uErr) throw uErr;
+
+      console.log(`[MP_DEBUG ${now}] fila(${queueEntries.length}) waiting(${waitingMatches.length}) active(${activeMatches.length}) userMatches(${userMatches.length})`);
+
+      res.json({
+        timestamp: now,
+        authHeaderPresent: !!authHeader,
+        userId,
+        queueEntries,
+        waitingMatches,
+        activeMatches,
+        userMatches,
+      });
+    } catch (error) {
+      console.error('[MP_DEBUG] Erro ao recuperar estado:', error);
+      res.status(500).json({ error: 'Erro ao recuperar estado multiplayer', details: (error as any)?.message });
+    }
+  });
 
   // Buscar todos os mundos disponíveis
   app.get("/api/worlds", async (_req, res) => {
