@@ -1,0 +1,100 @@
+-- Migration: adjust busy guard to only block active matches + cleanup orphan waiting
+-- Date: 2025-11-10
+-- Reason: Blocking waiting matches caused deadlock (ninguém se encontra). We now:
+-- 1. Cleanup orphan waiting matches whose players left the queue.
+-- 2. Consider players busy only if in an ACTIVE match.
+
+CREATE OR REPLACE FUNCTION create_match_and_mark_queue(opponent_id uuid)
+RETURNS multiplayer_matches
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  auth_user_id uuid := auth.uid();
+  waiting_opponent multiplayer_queue%ROWTYPE;
+  waiting_self multiplayer_queue%ROWTYPE;
+  new_match multiplayer_matches%ROWTYPE;
+BEGIN
+  IF auth_user_id IS NULL THEN
+    RAISE EXCEPTION 'Auth user required';
+  END IF;
+  IF opponent_id IS NULL THEN
+    RAISE EXCEPTION 'Opponent id required';
+  END IF;
+  IF auth_user_id = opponent_id THEN
+    RAISE EXCEPTION 'Cannot match with yourself';
+  END IF;
+
+  -- Cleanup: remove waiting matches where at least one player is no longer waiting in queue
+  DELETE FROM multiplayer_matches mm
+  WHERE mm.status = 'waiting'
+    AND (
+      NOT EXISTS (SELECT 1 FROM multiplayer_queue q WHERE q.user_id = mm.player1_id AND q.status = 'waiting') OR
+      NOT EXISTS (SELECT 1 FROM multiplayer_queue q WHERE q.user_id = mm.player2_id AND q.status = 'waiting')
+    );
+
+  -- Busy guards (ACTIVE only)
+  IF EXISTS (
+    SELECT 1 FROM multiplayer_matches
+    WHERE status = 'active'
+      AND (player1_id = opponent_id OR player2_id = opponent_id)
+  ) THEN
+    RAISE EXCEPTION 'Opponent busy';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM multiplayer_matches
+    WHERE status = 'active'
+      AND (player1_id = auth_user_id OR player2_id = auth_user_id)
+  ) THEN
+    RAISE EXCEPTION 'Current user busy';
+  END IF;
+
+  -- Lock opponent row
+  SELECT * INTO waiting_opponent
+  FROM multiplayer_queue
+  WHERE user_id = opponent_id AND status = 'waiting'
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Opponent not in waiting queue';
+  END IF;
+
+  -- Lock self row
+  SELECT * INTO waiting_self
+  FROM multiplayer_queue
+  WHERE user_id = auth_user_id AND status = 'waiting'
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Current user not in waiting queue';
+  END IF;
+
+  -- Prevent duplicate waiting match between same pair (fresh check after cleanup)
+  IF EXISTS (
+    SELECT 1 FROM multiplayer_matches
+    WHERE status = 'waiting'
+      AND ((player1_id = opponent_id AND player2_id = auth_user_id)
+        OR (player1_id = auth_user_id AND player2_id = opponent_id))
+  ) THEN
+    RAISE EXCEPTION 'Match already exists between these players';
+  END IF;
+
+  -- Remove both queue entries
+  DELETE FROM multiplayer_queue WHERE user_id IN (opponent_id, auth_user_id);
+
+  -- Create match
+  INSERT INTO multiplayer_matches(
+    player1_id, player1_username,
+    player2_id, player2_username,
+    status
+  ) VALUES (
+    waiting_opponent.user_id, waiting_opponent.username,
+    waiting_self.user_id, waiting_self.username,
+    'waiting'
+  ) RETURNING * INTO new_match;
+
+  RETURN new_match;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION create_match_and_mark_queue(uuid) TO authenticated;

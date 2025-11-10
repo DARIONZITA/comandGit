@@ -24,6 +24,9 @@ export default function Multiplayer() {
     joinQueue,
     leaveQueue,
     setReady,
+    changeOpponent,
+    // novo: cancelar match finalizando conexão
+    cancelMatch,
     sendTypingEvent,
     submitAnswer,
   } = useMultiplayer();
@@ -123,6 +126,16 @@ export default function Multiplayer() {
     return <MatchmakingScreen isSearching={isSearching} onCancel={handleCancel} />;
   }
 
+  // Se o oponente saiu (finish/opponent_left) e este cliente não é o winner, voltar para matchmaking
+  if (
+    matchState.status === 'finished' &&
+    matchState.winnerReason === 'opponent_left' &&
+    matchState.winnerId !== user?.id
+  ) {
+    // O hook já tenta reentrar na fila; aqui garantimos UI consistente
+    return <MatchmakingScreen isSearching={true} onCancel={handleCancel} />;
+  }
+
   // Tela de espera (ambos prontos)
   if (matchState.status === 'waiting') {
     const isPlayer1 = matchState.player1.id === user?.id;
@@ -141,8 +154,8 @@ export default function Multiplayer() {
     });
 
     const handleCancelMatch = async () => {
-      await leaveQueue();
-      setLocation('/');
+      await cancelMatch(); // finaliza a match para liberar o oponente
+      setLocation('/'); // vai para o menu
     };
 
     return (
@@ -198,14 +211,24 @@ export default function Multiplayer() {
               >
                 Estou Pronto!
               </Button>
-              <Button
-                onClick={handleCancelMatch}
-                variant="outline"
-                size="lg"
-                className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
-              >
-                Cancelar Partida
-              </Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  onClick={changeOpponent}
+                  variant="outline"
+                  size="lg"
+                  className="w-full border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                >
+                  Trocar Oponente
+                </Button>
+                <Button
+                  onClick={handleCancelMatch}
+                  variant="outline"
+                  size="lg"
+                  className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -216,14 +239,24 @@ export default function Multiplayer() {
                   </p>
                 </CardContent>
               </Card>
-              <Button
-                onClick={handleCancelMatch}
-                variant="outline"
-                size="lg"
-                className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
-              >
-                Cancelar Partida
-              </Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  onClick={changeOpponent}
+                  variant="outline"
+                  size="lg"
+                  className="w-full border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                >
+                  Trocar Oponente
+                </Button>
+                <Button
+                  onClick={handleCancelMatch}
+                  variant="outline"
+                  size="lg"
+                  className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -276,7 +309,7 @@ export default function Multiplayer() {
             </div>
             
             <Button 
-              onClick={() => setLocation('/')} 
+              onClick={async () => { await cancelMatch(); setLocation('/'); }} 
               variant="outline" 
               size="sm" 
               className="border-primary/50 hover:bg-primary/10 hover:border-primary text-primary"

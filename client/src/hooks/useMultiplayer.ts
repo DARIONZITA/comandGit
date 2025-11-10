@@ -55,6 +55,7 @@ export function useMultiplayer() {
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const waitingRefetchRef = useRef<NodeJS.Timeout | null>(null);
+  const requeueLockRef = useRef(false);
 
   // Gerar desafios aleatórios
   const generateRandomChallenges = useCallback(() => {
@@ -156,6 +157,34 @@ export function useMultiplayer() {
         .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
         .in('status', ['waiting', 'finished']);
 
+      // Finalizar partidas ATIVAS possivelmente órfãs do próprio usuário
+      // Critérios: (a) sem started_at e criadas há > 2min, ou (b) started_at há mais que game_duration + 60s
+      const { data: myActiveMatches } = await supabase
+        .from('multiplayer_matches')
+        .select('*')
+        .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
+        .eq('status', 'active');
+      if (myActiveMatches && myActiveMatches.length) {
+        for (const m of myActiveMatches as any[]) {
+          const now = Date.now();
+          const createdAt = m.created_at ? new Date(m.created_at).getTime() : 0;
+          const startedAt = m.started_at ? new Date(m.started_at).getTime() : null;
+          const durationMs = ((m.game_duration ?? 120) + 60) * 1000; // +60s margem
+          const isStale = (!startedAt && now - createdAt > 2 * 60 * 1000) || (startedAt && now - startedAt > durationMs);
+          if (isStale) {
+            await supabase
+              .from('multiplayer_matches')
+              .update({
+                status: 'finished',
+                winner_id: m.player1_id, // arbitrário em limpeza
+                winner_reason: 'stale_cleanup',
+                finished_at: new Date().toISOString(),
+              })
+              .eq('id', m.id);
+          }
+        }
+      }
+
       // Inserir própria entrada na fila com username correto
       console.log('[Multiplayer] 📝 Inserindo na fila:', { user_id: user.id, username, status: 'waiting' });
       const { data: insertedRow, error: insertSelfError } = await supabase
@@ -171,65 +200,65 @@ export function useMultiplayer() {
       
       console.log('[Multiplayer] ✅ Inserido na fila:', insertedRow);
 
-      // Ver se já existe um oponente aguardando
-      const { data: opponentRow } = await supabase
+      // Procurar qualquer oponente waiting (apenas filtrar quem está em partida ACTIVE; ignorar waiting para não bloquear corrida)
+      const { data: waitingOpponents } = await supabase
         .from('multiplayer_queue')
         .select('*')
         .eq('status', 'waiting')
         .neq('user_id', user.id)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+        .order('created_at', { ascending: true });
 
-      if (opponentRow) {
-        console.log('[Multiplayer] 🤝 Opponent found in queue, trying to create match vs', opponentRow.user_id);
-        console.log('[Multiplayer] 🤝 Opponent data:', opponentRow);
-        
+      let chosenOpponent: any | null = null;
+      if (waitingOpponents && waitingOpponents.length) {
+        for (const opp of waitingOpponents) {
+          // Considerar ocupado apenas se estiver em partida ACTIVE (waiting pode ser resquício antes de cleanup)
+            const { data: activeMatch } = await supabase
+              .from('multiplayer_matches')
+              .select('id')
+              .or(`player1_id.eq.${opp.user_id},player2_id.eq.${opp.user_id}`)
+              .eq('status', 'active')
+              .limit(1)
+              .maybeSingle();
+            if (!activeMatch) {
+              chosenOpponent = opp;
+              break;
+            } else {
+              console.log('[Multiplayer] ⚠️ Oponente em partida ativa, ignorando:', { opp: opp.user_id, match: activeMatch.id });
+            }
+        }
+      }
+
+      if (chosenOpponent) {
+        console.log('[Multiplayer] 🤝 Tentando criar match vs', chosenOpponent.user_id);
         const { data: newMatch, error: rpcError } = await supabase
-          .rpc('create_match_and_mark_queue', { opponent_id: opponentRow.user_id });
-        
+          .rpc('create_match_and_mark_queue', { opponent_id: chosenOpponent.user_id });
         if (rpcError) {
           console.warn('[Multiplayer] create_match RPC error', rpcError);
-          // Se a partida já existe (corrida), buscar ela
           if (rpcError.code === 'P0001' && rpcError.message?.includes('Match already exists')) {
             const { data: existingMatch } = await supabase
               .from('multiplayer_matches')
               .select('*')
               .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
-              .or(`player1_id.eq.${opponentRow.user_id},player2_id.eq.${opponentRow.user_id}`)
+              .or(`player1_id.eq.${chosenOpponent.user_id},player2_id.eq.${chosenOpponent.user_id}`)
               .eq('status', 'waiting')
               .order('created_at', { ascending: false })
               .limit(1)
               .maybeSingle();
-
-            console.log('[Multiplayer] 🔍 Existing match found:', existingMatch);
-
             if (existingMatch) {
-              // Limpar qualquer entrada restante na fila
               await supabase.from('multiplayer_queue').delete().eq('user_id', user.id);
-              
-              // IMPORTANTE: Atualizar os usernames da match existente com os da fila atual!
               const isPlayer1InExisting = existingMatch.player1_id === user.id;
-              const updateData = isPlayer1InExisting 
-                ? { player1_username: username, player2_username: opponentRow.username }
-                : { player1_username: opponentRow.username, player2_username: username };
-              
-              console.log('[Multiplayer] 🔄 Atualizando usernames da match:', updateData);
-              
+              const updateData = isPlayer1InExisting
+                ? { player1_username: username, player2_username: chosenOpponent.username }
+                : { player1_username: chosenOpponent.username, player2_username: username };
               await supabase
                 .from('multiplayer_matches')
                 .update(updateData)
                 .eq('id', existingMatch.id);
-              
-              // Buscar a match atualizada
               const { data: updatedMatch } = await supabase
                 .from('multiplayer_matches')
                 .select('*')
                 .eq('id', existingMatch.id)
                 .single();
-              
-              console.log('[Multiplayer] ✅ Match com usernames atualizados:', updatedMatch);
-              
               setMatchState({
                 id: updatedMatch.id,
                 player1: {
@@ -255,41 +284,33 @@ export function useMultiplayer() {
               return;
             }
           }
-          // Outros erros (400), seguir com listeners + polling: alguém pode criar a match
-          console.info('[Multiplayer] Continuing with listeners + polling after RPC error');
+          console.info('[Multiplayer] Continuing com listeners + polling porque RPC falhou/concorrência');
         }
-        if (!newMatch) throw new Error('RPC não retornou partida');
-
-        console.log('[Multiplayer] ✅ Match criada:', {
-          id: newMatch.id,
-          player1: newMatch.player1_username,
-          player2: newMatch.player2_username
-        });
-
-        setMatchState({
-          id: newMatch.id,
-          player1: {
-            id: newMatch.player1_id,
-            username: newMatch.player1_username,
-            score: newMatch.player1_score || 0,
-            currentChallenge: newMatch.player1_current_challenge || 0,
-            isReady: newMatch.player1_is_ready || false,
-          },
-          player2: {
-            id: newMatch.player2_id,
-            username: newMatch.player2_username,
-            score: newMatch.player2_score || 0,
-            currentChallenge: newMatch.player2_current_challenge || 0,
-            isReady: newMatch.player2_is_ready || false,
-          },
-          status: newMatch.status,
-          gameDuration: newMatch.game_duration,
-          scoreLimit: newMatch.score_limit,
-        });
-
-        setChallenges(generateRandomChallenges());
-        setIsSearching(false);
-        return;
+        if (newMatch) {
+          setMatchState({
+            id: newMatch.id,
+            player1: {
+              id: newMatch.player1_id,
+              username: newMatch.player1_username,
+              score: newMatch.player1_score || 0,
+              currentChallenge: newMatch.player1_current_challenge || 0,
+              isReady: newMatch.player1_is_ready || false,
+            },
+            player2: {
+              id: newMatch.player2_id,
+              username: newMatch.player2_username,
+              score: newMatch.player2_score || 0,
+              currentChallenge: newMatch.player2_current_challenge || 0,
+              isReady: newMatch.player2_is_ready || false,
+            },
+            status: newMatch.status,
+            gameDuration: newMatch.game_duration,
+            scoreLimit: newMatch.score_limit,
+          });
+          setChallenges(generateRandomChallenges());
+          setIsSearching(false);
+          return;
+        }
       }
 
       // Sem oponente imediato: configurar listeners e polling
@@ -346,11 +367,17 @@ export function useMultiplayer() {
           { event: 'INSERT', schema: 'public', table: 'multiplayer_queue' },
           async (payload) => {
             const newPlayer = payload.new as any;
-            if (newPlayer.user_id === user.id || newPlayer.status !== 'waiting') {
-              return;
-            }
-            const { error: rpcErr } = await supabase.rpc('create_match_and_mark_queue', { opponent_id: newPlayer.user_id });
-            // ignora erros de corrida
+            if (newPlayer.user_id === user.id || newPlayer.status !== 'waiting') return;
+            // Apenas bloquear se estiver em partida ACTIVE (não waiting)
+            const { data: activeMatch } = await supabase
+              .from('multiplayer_matches')
+              .select('id')
+              .or(`player1_id.eq.${newPlayer.user_id},player2_id.eq.${newPlayer.user_id}`)
+              .eq('status', 'active')
+              .limit(1)
+              .maybeSingle();
+            if (activeMatch) return;
+            await supabase.rpc('create_match_and_mark_queue', { opponent_id: newPlayer.user_id });
           }
         )
         .on(
@@ -442,6 +469,71 @@ export function useMultiplayer() {
       console.error('Error leaving queue:', error);
     }
   }, [user]);
+
+  // Trocar de oponente (cancela match atual e volta à fila)
+  const changeOpponent = useCallback(async () => {
+    if (!matchState || !user) return;
+    try {
+      // Finalizar a partida para o outro jogador reentrar (reason opponent_left)
+      await supabase
+        .from('multiplayer_matches')
+        .update({
+          status: 'finished',
+          winner_id: user.id,
+          winner_reason: 'opponent_left',
+          finished_at: new Date().toISOString(),
+        })
+        .eq('id', matchState.id);
+
+      // Limpar estado local e voltar para matchmaking
+      setMatchState(null);
+      matchChannelRef.current?.unsubscribe();
+      setIsSearching(true);
+      // Voltar à fila automaticamente
+      await joinQueue();
+    } catch (error) {
+      console.error('Error changing opponent:', error);
+    }
+  }, [matchState, user, joinQueue]);
+
+  // Cancelar match (sair do multiplayer mantendo oponente livre para requeue)
+  const cancelMatch = useCallback(async () => {
+    if (!matchState || !user) return;
+    try {
+      await supabase
+        .from('multiplayer_matches')
+        .update({
+          status: 'finished',
+          winner_id: user.id,
+          winner_reason: 'opponent_left', // reutilizamos a lógica de requeue do outro lado
+          finished_at: new Date().toISOString(),
+        })
+        .eq('id', matchState.id);
+
+      // Remover própria entrada da fila se existir
+      await supabase.from('multiplayer_queue').delete().eq('user_id', user.id);
+
+      setMatchState(null);
+      matchChannelRef.current?.unsubscribe();
+      setIsSearching(false); // não voltar à fila
+    } catch (e) {
+      console.error('Error cancelling match:', e);
+    }
+  }, [matchState, user]);
+
+  // Reentrar na fila quando o oponente cancelar (match deletada por outro)
+  const requeueAfterOpponentLeft = useCallback(async () => {
+    if (requeueLockRef.current) return;
+    requeueLockRef.current = true;
+    try {
+      setMatchState(null);
+      matchChannelRef.current?.unsubscribe();
+      setIsSearching(true);
+      await joinQueue();
+    } finally {
+      requeueLockRef.current = false;
+    }
+  }, [joinQueue]);
 
   // Marcar jogador como pronto
   const setReady = useCallback(async () => {
@@ -671,7 +763,16 @@ export function useMultiplayer() {
         },
         (payload) => {
           const updated = payload.new as any;
-          
+          // Caso especial: opponent_left - queremos requeue imediato SEM mostrar tela de derrota
+          if (updated.status === 'finished' && updated.winner_reason === 'opponent_left' && updated.winner_id !== user?.id) {
+            console.log('[Multiplayer] 🚪 Oponente deixou a partida. Ignorando estado de derrota e reentrando na fila. Match:', updated.id);
+            if (!requeueLockRef.current) {
+              requeueAfterOpponentLeft();
+            }
+            return; // evitar atualizar state para 'finished' e disparar UI de derrota
+          }
+
+          // Atualização normal da partida
           setMatchState(prev => {
             if (!prev) return prev;
             return {
@@ -695,8 +796,20 @@ export function useMultiplayer() {
               finishedAt: updated.finished_at,
             };
           });
-
-          // started_at agora é controlado no setReady quando ambos estão prontos
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'multiplayer_matches',
+          filter: `id=eq.${matchState.id}`,
+        },
+        async () => {
+          // Se a partida foi deletada (oponente clicou cancelar/trocar), voltar imediatamente para a fila
+          console.log('[Multiplayer] 🧨 Match deletada por oponente. Reentrando na fila...');
+          await requeueAfterOpponentLeft();
         }
       )
       .on(
@@ -741,16 +854,22 @@ export function useMultiplayer() {
           .eq('id', matchState.id)
           .single();
         if (m) {
-          setMatchState(prev => prev ? ({
-            ...prev,
-            player1: { ...prev.player1, score: m.player1_score, currentChallenge: m.player1_current_challenge, isReady: m.player1_is_ready },
-            player2: { ...prev.player2, score: m.player2_score, currentChallenge: m.player2_current_challenge, isReady: m.player2_is_ready },
-            status: m.status,
-            winnerId: m.winner_id,
-            winnerReason: m.winner_reason,
-            startedAt: m.started_at,
-            finishedAt: m.finished_at,
-          }) : prev);
+          // Se já chega como finished por opponent_left e este usuário NÃO é o winner_id, não queremos mostrar derrota; requeue imediato
+          if (m.status === 'finished' && m.winner_reason === 'opponent_left' && m.winner_id !== user?.id) {
+            console.log('[Multiplayer] 🔄 Refetch inicial detectou opponent_left. Reentrando na fila sem mostrar derrota.');
+            await requeueAfterOpponentLeft();
+          } else {
+            setMatchState(prev => prev ? ({
+              ...prev,
+              player1: { ...prev.player1, score: m.player1_score, currentChallenge: m.player1_current_challenge, isReady: m.player1_is_ready },
+              player2: { ...prev.player2, score: m.player2_score, currentChallenge: m.player2_current_challenge, isReady: m.player2_is_ready },
+              status: m.status,
+              winnerId: m.winner_id,
+              winnerReason: m.winner_reason,
+              startedAt: m.started_at,
+              finishedAt: m.finished_at,
+            }) : prev);
+          }
         }
       } catch (e) {
         console.warn('[Multiplayer] initial refetch after subscribe failed', e);
@@ -772,14 +891,68 @@ export function useMultiplayer() {
       return;
     }
 
+    let checkCount = 0;
     waitingRefetchRef.current = setInterval(async () => {
       try {
+        checkCount++;
         const { data: m } = await supabase
           .from('multiplayer_matches')
           .select('*')
           .eq('id', matchState.id)
           .single();
-        if (!m) return;
+        // Se a match sumiu, significa que o oponente cancelou/trocou. Reentrar na fila imediatamente.
+        if (!m) {
+          console.log('[Multiplayer] ❌ Match não encontrada (cancelamento). Reentrando na fila...');
+          if (waitingRefetchRef.current) {
+            clearInterval(waitingRefetchRef.current);
+            waitingRefetchRef.current = null;
+          }
+          await requeueAfterOpponentLeft();
+          return;
+        }
+        // Detectar finalização por saída do oponente via polling (caso realtime falhe)
+        if (m.status === 'finished' && m.winner_reason === 'opponent_left') {
+          console.log('[Multiplayer] 🛑 Match marcada opponent_left (poll). Reentrando na fila...');
+          if (waitingRefetchRef.current) {
+            clearInterval(waitingRefetchRef.current);
+            waitingRefetchRef.current = null;
+          }
+            await requeueAfterOpponentLeft();
+            return;
+        }
+        // Evitar aplicar estado "finished" local se motivo for opponent_left do outro lado (race condition extra)
+        if (m.status === 'finished' && m.winner_reason === 'opponent_left' && m.winner_id !== user?.id) {
+          console.log('[Multiplayer] ⚠️ Race detectada: finished opponent_left antes de tratamento. Ignorando update e requeue.');
+          if (waitingRefetchRef.current) {
+            clearInterval(waitingRefetchRef.current);
+            waitingRefetchRef.current = null;
+          }
+          await requeueAfterOpponentLeft();
+          return;
+        }
+
+        // Após 5s (5 checks de 1s), verificar se oponente ainda está válido
+        // Verificar se o oponente está ocupado em outra partida (waiting/active) - feito já desde o primeiro check
+        if (m) {
+          const isPlayer1 = matchState.player1.id === user?.id;
+          const opponentId = isPlayer1 ? m.player2_id : m.player1_id;
+          
+          const { data: otherMatchCheck } = await supabase
+            .from('multiplayer_matches')
+            .select('id')
+            .or(`player1_id.eq.${opponentId},player2_id.eq.${opponentId}`)
+            .eq('status', 'active')
+            .neq('id', matchState.id)
+            .maybeSingle();
+
+          // Se existe outra partida ATIVA envolvendo o oponente, trocar imediatamente
+          if (otherMatchCheck) {
+            console.log('[Multiplayer] 🔁 Oponente ocupado em outra match, trocando automaticamente');
+            await changeOpponent();
+            return;
+          }
+        }
+        
         if (
           m.player1_is_ready !== matchState.player1.isReady ||
           m.player2_is_ready !== matchState.player2.isReady ||
@@ -806,7 +979,7 @@ export function useMultiplayer() {
         waitingRefetchRef.current = null;
       }
     };
-  }, [matchState]);
+  }, [matchState, user, changeOpponent]);
 
   // Timer do jogo
   useEffect(() => {
@@ -946,6 +1119,8 @@ export function useMultiplayer() {
     joinQueue,
     leaveQueue,
     setReady,
+    changeOpponent,
+    cancelMatch,
     sendTypingEvent,
     submitAnswer,
   };
