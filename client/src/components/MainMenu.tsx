@@ -1,8 +1,9 @@
-import { Trophy, Target, BookOpen, Gauge } from "lucide-react";
+import { Trophy, Target, BookOpen, Gauge, Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import terminalIcon from "@assets/generated_images/Terminal_icon_retro_style_e79f8591.png";
 import { GameMode } from "@shared/schema";
+import { useLocation } from "wouter";
 
 type ModeScoreMap = Record<GameMode, number>;
 
@@ -14,6 +15,8 @@ interface MainMenuProps {
 }
 
 export default function MainMenu({ onSelectMode, onViewLeaderboard, highScore, modeHighScores }: MainMenuProps) {
+  const [, setLocation] = useLocation();
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines">
       <div className="max-w-4xl w-full space-y-8">
@@ -102,6 +105,32 @@ export default function MainMenu({ onSelectMode, onViewLeaderboard, highScore, m
                 </div>
                 <Button variant="outline" className="border-orange-500/50 text-orange-600 hover:bg-orange-500/10" data-testid="button-start-arcade">
                   RUSH!
+                </Button>
+              </CardHeader>
+            </Card>
+
+            {/* Modo Multiplayer */}
+            <Card className="hover-elevate cursor-pointer border-2 border-purple-500/50 relative overflow-hidden" onClick={() => setLocation("/multiplayer")} data-testid="card-mode-multiplayer">
+              {/* Badge "NEW" */}
+              <div className="absolute top-2 right-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+                NOVO
+              </div>
+              
+              <CardHeader className="flex flex-row items-center gap-4">
+                <div className="p-3 rounded-md bg-purple-500/10">
+                  <Swords className="w-6 h-6 text-purple-500" />
+                </div>
+                <div className="flex-1">
+                  <CardTitle className="text-purple-600 dark:text-purple-400">Modo 4: Multiplayer 1v1</CardTitle>
+                  <CardDescription>
+                    Compita contra outro jogador em tempo real! ⚔️
+                  </CardDescription>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    <span className="font-semibold text-purple-500">Corrida de pontos • Desafios aleatórios</span>
+                  </p>
+                </div>
+                <Button variant="outline" className="border-purple-500/50 text-purple-600 hover:bg-purple-500/10" data-testid="button-start-multiplayer">
+                  BATALHAR
                 </Button>
               </CardHeader>
             </Card>

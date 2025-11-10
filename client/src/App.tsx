@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Home from "@/pages/Home";
 import Game from "@/pages/Game";
+import Multiplayer from "@/pages/Multiplayer";
 import Login from "@/pages/Login";
 import Cadastro from "@/pages/Cadastro";
 import EmailConfirmation from "@/pages/EmailConfirmation";
@@ -28,6 +29,11 @@ function Router() {
       <Route path="/profile">
         <ProtectedRoute>
           <Profile />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/multiplayer">
+        <ProtectedRoute>
+          <Multiplayer />
         </ProtectedRoute>
       </Route>
       <Route path="/game/:worldId">
