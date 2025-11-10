@@ -56,6 +56,7 @@ export function useMultiplayer() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const waitingRefetchRef = useRef<NodeJS.Timeout | null>(null);
   const requeueLockRef = useRef(false);
+  const globalMatchChannelRef = useRef<RealtimeChannel | null>(null);
 
   // Gerar desafios aleatórios
   const generateRandomChallenges = useCallback(() => {
@@ -1091,11 +1092,101 @@ export function useMultiplayer() {
     }
   }, [opponentActivity.lastSubmission]);
 
+  // Listener global para detectar novas matches criadas (por convites ou aleatório)
+  useEffect(() => {
+    if (!user || matchState) return; // Só escutar se não tiver match ativa
+
+    console.log('[Multiplayer] 🔊 Setting up global match listener for user:', user.id);
+    
+    globalMatchChannelRef.current = supabase
+      .channel(`global-match:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'multiplayer_matches',
+          filter: `player1_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const newMatch = payload.new as any;
+          console.log('[Multiplayer] 🎮 New match detected (player1):', newMatch.id);
+          
+          setMatchState({
+            id: newMatch.id,
+            player1: {
+              id: newMatch.player1_id,
+              username: newMatch.player1_username,
+              score: newMatch.player1_score || 0,
+              currentChallenge: newMatch.player1_current_challenge || 0,
+              isReady: newMatch.player1_is_ready || false,
+            },
+            player2: {
+              id: newMatch.player2_id,
+              username: newMatch.player2_username,
+              score: newMatch.player2_score || 0,
+              currentChallenge: newMatch.player2_current_challenge || 0,
+              isReady: newMatch.player2_is_ready || false,
+            },
+            status: newMatch.status,
+            gameDuration: newMatch.game_duration,
+            scoreLimit: newMatch.score_limit,
+          });
+          
+          setChallenges(generateRandomChallenges());
+          setIsSearching(false);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'multiplayer_matches',
+          filter: `player2_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const newMatch = payload.new as any;
+          console.log('[Multiplayer] 🎮 New match detected (player2):', newMatch.id);
+          
+          setMatchState({
+            id: newMatch.id,
+            player1: {
+              id: newMatch.player1_id,
+              username: newMatch.player1_username,
+              score: newMatch.player1_score || 0,
+              currentChallenge: newMatch.player1_current_challenge || 0,
+              isReady: newMatch.player1_is_ready || false,
+            },
+            player2: {
+              id: newMatch.player2_id,
+              username: newMatch.player2_username,
+              score: newMatch.player2_score || 0,
+              currentChallenge: newMatch.player2_current_challenge || 0,
+              isReady: newMatch.player2_is_ready || false,
+            },
+            status: newMatch.status,
+            gameDuration: newMatch.game_duration,
+            scoreLimit: newMatch.score_limit,
+          });
+          
+          setChallenges(generateRandomChallenges());
+          setIsSearching(false);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      globalMatchChannelRef.current?.unsubscribe();
+    };
+  }, [user, matchState, generateRandomChallenges]);
+
   // Cleanup ao desmontar
   useEffect(() => {
     return () => {
       queueChannelRef.current?.unsubscribe();
       matchChannelRef.current?.unsubscribe();
+      globalMatchChannelRef.current?.unsubscribe();
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }

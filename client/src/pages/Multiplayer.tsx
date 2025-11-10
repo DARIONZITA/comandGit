@@ -2,7 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
+import { useMultiplayerInvite } from '@/hooks/useMultiplayerInvite';
 import { MatchmakingScreen } from '@/components/MatchmakingScreen';
+import { MultiplayerModeSelection } from '@/components/MultiplayerModeSelection';
+import { InvitePlayerSearch } from '@/components/InvitePlayerSearch';
+import { InviteNotification } from '@/components/InviteNotification';
 import { TugOfWarBar } from '@/components/TugOfWarBar';
 import { OpponentGhost } from '@/components/OpponentGhost';
 import CommandInput from '@/components/CommandInput';
@@ -15,6 +19,11 @@ export default function Multiplayer() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Estado do modo de jogo
+  const [gameMode, setGameMode] = useState<'select' | 'random' | 'invite'>('select');
+  
+  // Hook de multiplayer aleatório
   const {
     isSearching,
     matchState,
@@ -31,6 +40,20 @@ export default function Multiplayer() {
     submitAnswer,
   } = useMultiplayer();
 
+  // Hook de convites
+  const {
+    searchResults,
+    isSearching: isSearchingUsers,
+    sentInvite,
+    receivedInvites,
+    isWaitingForResponse,
+    searchUsers,
+    sendInvite,
+    acceptInvite,
+    rejectInvite,
+    cancelInvite,
+  } = useMultiplayerInvite();
+
   const [isReady, setIsReady] = useState(false);
   const [lastOpponentResult, setLastOpponentResult] = useState<'correct' | 'wrong' | null>(null);
   const [inputKey, setInputKey] = useState(0); // Para resetar o CommandInput
@@ -42,12 +65,12 @@ export default function Multiplayer() {
     }
   }, [user, setLocation]);
 
-  // Iniciar busca automaticamente
+  // Iniciar busca automaticamente apenas no modo aleatório
   useEffect(() => {
-    if (user && !isSearching && !matchState) {
+    if (user && !isSearching && !matchState && gameMode === 'random') {
       joinQueue();
     }
-  }, [user, isSearching, matchState, joinQueue]);
+  }, [user, isSearching, matchState, gameMode, joinQueue]);
 
   // Atualizar resultado do oponente quando a pontuação mudar
   useEffect(() => {
@@ -61,9 +84,91 @@ export default function Multiplayer() {
     }
   }, [matchState, user]);
 
+  // Quando o convite for aceito (remetente), mudar para modo random
+  useEffect(() => {
+    if (sentInvite?.status === 'accepted' && gameMode === 'invite') {
+      console.log('[Multiplayer] Convite aceito! Mudando para modo random');
+      setGameMode('random');
+    }
+  }, [sentInvite?.status, gameMode]);
+
   const handleCancel = () => {
     leaveQueue();
+    setGameMode('select');
+  };
+
+  const handleCancelToMenu = () => {
+    leaveQueue();
     setLocation('/');
+  };
+
+  // Handlers de convites
+  const handleSelectUser = async (selectedUser: any) => {
+    try {
+      await sendInvite(selectedUser.user_id, selectedUser.username);
+      toast({
+        title: "Convite Enviado!",
+        description: `Aguardando resposta de ${selectedUser.username}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar convite",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAcceptInvite = async (inviteId: string) => {
+    try {
+      const matchId = await acceptInvite(inviteId);
+      toast({
+        title: "Convite Aceito!",
+        description: "Preparando partida...",
+      });
+      // Mudar para modo "random" para garantir que o fluxo de match funcione
+      setGameMode('random');
+      // O useMultiplayer detectará a nova match via listener global
+    } catch (error: any) {
+      toast({
+        title: "Erro ao aceitar convite",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectInvite = async (inviteId: string) => {
+    try {
+      await rejectInvite(inviteId);
+      toast({
+        title: "Convite Recusado",
+        description: "O jogador será notificado",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao recusar convite",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelInvite = async () => {
+    if (!sentInvite) return;
+    try {
+      await cancelInvite(sentInvite.id);
+      toast({
+        title: "Convite Cancelado",
+        description: "Você pode buscar outro jogador",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao cancelar convite",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleReady = () => {
@@ -121,23 +226,83 @@ export default function Multiplayer() {
   // Calcula o desafio atual SEM usar hooks condicionais (evita erro de ordem de hooks)
   const currentChallenge = useMemo(() => getCurrentChallenge(), [matchState, challenges, user]);
 
-  // Tela de matchmaking
-  if (isSearching || !matchState) {
-    return <MatchmakingScreen isSearching={isSearching} onCancel={handleCancel} />;
+  // RENDERIZAÇÃO: Seleção de modo
+  if (gameMode === 'select' && !matchState) {
+    return (
+      <>
+        <InviteNotification
+          invites={receivedInvites}
+          onAccept={handleAcceptInvite}
+          onReject={handleRejectInvite}
+        />
+        <MultiplayerModeSelection
+          onSelectRandom={() => setGameMode('random')}
+          onSelectInvite={() => setGameMode('invite')}
+          onCancel={handleCancelToMenu}
+        />
+      </>
+    );
+  }
+
+  // RENDERIZAÇÃO: Modo Convite (busca de jogador)
+  if (gameMode === 'invite' && !matchState) {
+    return (
+      <>
+        <InviteNotification
+          invites={receivedInvites}
+          onAccept={handleAcceptInvite}
+          onReject={handleRejectInvite}
+        />
+        <InvitePlayerSearch
+          searchResults={searchResults}
+          isSearching={isSearchingUsers}
+          isWaitingForResponse={isWaitingForResponse}
+          sentInviteUsername={sentInvite?.receiver_username}
+          onSearch={searchUsers}
+          onSelectUser={handleSelectUser}
+          onCancelInvite={handleCancelInvite}
+          onBack={() => setGameMode('select')}
+        />
+      </>
+    );
+  }
+
+  // Tela de matchmaking (modo aleatório)
+  if (isSearching || (!matchState && gameMode === 'random')) {
+    return (
+      <>
+        <InviteNotification
+          invites={receivedInvites}
+          onAccept={handleAcceptInvite}
+          onReject={handleRejectInvite}
+        />
+        <MatchmakingScreen isSearching={isSearching} onCancel={handleCancel} />
+      </>
+    );
   }
 
   // Se o oponente saiu (finish/opponent_left) e este cliente não é o winner, voltar para matchmaking
   if (
+    matchState &&
     matchState.status === 'finished' &&
     matchState.winnerReason === 'opponent_left' &&
     matchState.winnerId !== user?.id
   ) {
     // O hook já tenta reentrar na fila; aqui garantimos UI consistente
-    return <MatchmakingScreen isSearching={true} onCancel={handleCancel} />;
+    return (
+      <>
+        <InviteNotification
+          invites={receivedInvites}
+          onAccept={handleAcceptInvite}
+          onReject={handleRejectInvite}
+        />
+        <MatchmakingScreen isSearching={true} onCancel={handleCancel} />
+      </>
+    );
   }
 
   // Tela de espera (ambos prontos)
-  if (matchState.status === 'waiting') {
+  if (matchState && matchState.status === 'waiting') {
     const isPlayer1 = matchState.player1.id === user?.id;
     const myReadyStatus = isPlayer1 ? matchState.player1.isReady : matchState.player2.isReady;
     const opponentReadyStatus = isPlayer1 ? matchState.player2.isReady : matchState.player1.isReady;
@@ -160,6 +325,11 @@ export default function Multiplayer() {
 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines">
+        <InviteNotification
+          invites={receivedInvites}
+          onAccept={handleAcceptInvite}
+          onReject={handleRejectInvite}
+        />
         <div className="max-w-2xl w-full space-y-8">
           <div className="text-center space-y-4">
             <Trophy className="w-24 h-24 text-primary mx-auto mb-4 animate-bounce" />
@@ -273,7 +443,7 @@ export default function Multiplayer() {
   // (mantido acima para não quebrar a ordem de hooks)
 
   // Tela de jogo ativo
-  if (matchState.status === 'active') {
+  if (matchState && matchState.status === 'active') {
     const isPlayer1 = matchState.player1.id === user?.id;
     const opponentUsername = isPlayer1 ? matchState.player2.username : matchState.player1.username;
 
@@ -290,6 +460,11 @@ export default function Multiplayer() {
 
     return (
       <div className="min-h-screen w-full bg-black text-white relative overflow-hidden scan-lines">
+        <InviteNotification
+          invites={receivedInvites}
+          onAccept={handleAcceptInvite}
+          onReject={handleRejectInvite}
+        />
         {/* Background tema escuro neon */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.15),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(6,182,212,0.1),transparent_50%)]" />
@@ -429,7 +604,7 @@ export default function Multiplayer() {
   }
 
   // Tela de resultado final
-  if (matchState.status === 'finished') {
+  if (matchState && matchState.status === 'finished') {
     const isWinner = matchState.winnerId === user?.id;
     const isPlayer1 = matchState.player1.id === user?.id;
     const finalScore = isPlayer1 ? matchState.player1.score : matchState.player2.score;
@@ -437,6 +612,11 @@ export default function Multiplayer() {
 
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white p-4">
+        <InviteNotification
+          invites={receivedInvites}
+          onAccept={handleAcceptInvite}
+          onReject={handleRejectInvite}
+        />
         <div className="max-w-2xl w-full space-y-8 text-center">
           <div>
             {isWinner ? (
