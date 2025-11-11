@@ -26,6 +26,7 @@ export interface ChallengeData {
   currentStateId: number;
   currentStatus: string; // Status do git com variáveis substituídas
   variables: Record<string, string>; // Variáveis usadas neste desafio
+  correctAnswer?: string; // Resposta correta com variáveis substituídas (para multiplayer)
 }
 
 export interface TransitionResult {
@@ -220,6 +221,10 @@ export class GameEngine {
       currentStateId: challenge.start_state_id,
       currentStatus: this.replaceVariables((state as RawState).status_template, variables),
       variables,
+      // Adicionar resposta correta com variáveis substituídas (para multiplayer)
+      correctAnswer: challenge.correct_answer_template 
+        ? this.replaceVariables(challenge.correct_answer_template, variables)
+        : undefined,
     };
   }
 

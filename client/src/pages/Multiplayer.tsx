@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trophy, Clock, Zap, Home, User, Sword, GitBranch, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useGameSounds } from '@/hooks/useGameSounds';
 
 export default function Multiplayer() {
   const [, setLocation] = useLocation();
@@ -39,6 +40,9 @@ export default function Multiplayer() {
     sendTypingEvent,
     submitAnswer,
   } = useMultiplayer();
+
+  // Sons do jogo (digitação, feedback)
+  const sounds = useGameSounds();
 
   // Hook de convites
   const {
@@ -309,15 +313,6 @@ export default function Multiplayer() {
     const opponentUsername = isPlayer1 ? matchState.player2.username : matchState.player1.username;
     const myUsername = isPlayer1 ? matchState.player1.username : matchState.player2.username;
 
-    console.log('[Multiplayer Page] Waiting screen - matchState:', {
-      player1: { id: matchState.player1.id, username: matchState.player1.username },
-      player2: { id: matchState.player2.id, username: matchState.player2.username },
-      myId: user?.id,
-      isPlayer1,
-      opponentUsername,
-      myUsername
-    });
-
     const handleCancelMatch = async () => {
       await cancelMatch(); // finaliza a match para liberar o oponente
       setLocation('/'); // vai para o menu
@@ -513,7 +508,11 @@ export default function Multiplayer() {
                 <div className="px-4 py-3 bg-gradient-to-r from-primary/20 to-cyan-500/20 border-b border-primary/40 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-widest">
                     <GitBranch className="w-5 h-5" />
-                    Seu Desafio
+                    {currentChallenge.compositeId ? (
+                      <span>Desafio Composto: Passo {currentChallenge.stepNumber}/{currentChallenge.totalSteps}</span>
+                    ) : (
+                      <span>Seu Desafio</span>
+                    )}
                   </div>
                   <span className="text-xs text-primary/70 font-mono bg-black/30 px-2 py-1 rounded">
                     #{(isPlayer1 ? matchState.player1.currentChallenge : matchState.player2.currentChallenge) + 1}
@@ -522,6 +521,23 @@ export default function Multiplayer() {
                 
                 <div className="p-8 space-y-8 flex-1 flex flex-col justify-center">
                   <div className="space-y-4">
+                    {currentChallenge.compositeId && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/40 rounded-lg text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                        <div className="flex gap-1">
+                          {Array.from({ length: currentChallenge.totalSteps || 0 }).map((_, i) => (
+                            <div 
+                              key={i} 
+                              className={`w-2 h-2 rounded-full ${
+                                i < (currentChallenge.stepNumber || 0) 
+                                  ? 'bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)]' 
+                                  : 'bg-gray-600'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span>Passo {currentChallenge.stepNumber} de {currentChallenge.totalSteps}</span>
+                      </div>
+                    )}
                     <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary leading-relaxed break-words drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]">
                       {currentChallenge.question}
                     </h2>
@@ -534,6 +550,7 @@ export default function Multiplayer() {
                       onSubmit={handleSubmit}
                       onInputChange={handleInputChange}
                       disabled={false}
+                      sounds={sounds}
                     />
                     <p className="text-xs text-gray-400 flex items-center gap-1.5">
                       <Activity className="w-3.5 h-3.5" />
