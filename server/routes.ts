@@ -168,6 +168,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Multiplayer Rating Leaderboard
+  app.get("/api/leaderboard/multiplayer", async (req, res) => {
+    try {
+      const limit = Math.max(1, Math.min(parseInt(req.query.limit as string) || 10, 50));
+
+      const { data, error } = await supabase.rpc('get_multiplayer_leaderboard', { limit_count: limit });
+
+      if (error) throw error;
+      res.json(data || []);
+    } catch (error) {
+      console.error('[MULTIPLAYER_LEADERBOARD] Error:', error);
+      res.status(500).json({ error: 'Failed to fetch multiplayer leaderboard' });
+    }
+  });
+
+  // Rating Multiplayer de um usuário específico
+  app.get("/api/user-multiplayer-rating/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      const { data, error } = await supabase
+        .from('multiplayer_ratings')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) throw error;
+      res.json(data);
+    } catch (error) {
+      console.error('[USER_MULTIPLAYER_RATING] Error:', error);
+      res.status(500).json({ error: 'Failed to fetch user multiplayer rating' });
+    }
+  });
+
   // Estatísticas de um usuário específico
   app.get("/api/user-stats/:userId", async (req, res) => {
     try {

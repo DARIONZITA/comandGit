@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +47,7 @@ export interface OpponentActivity {
 export function useMultiplayer() {
   const { user } = useAuth();
   const [isSearching, setIsSearching] = useState(false);
+  const queryClient = useQueryClient();
   const [matchState, setMatchState] = useState<MatchState | null>(null);
   const [challenges, setChallenges] = useState<MultiplayerChallenge[]>([]);
   const [opponentActivity, setOpponentActivity] = useState<OpponentActivity>({
@@ -1027,6 +1029,12 @@ export function useMultiplayer() {
             winner_id: winnerId,
             duration_seconds: matchState.gameDuration - timeRemaining,
           });
+
+        // Invalida caches para refletir mudanças no placar e no rating do usuário
+        if (user?.id) {
+          queryClient.invalidateQueries({ queryKey: ['userMultiplayerRating', user.id] });
+        }
+        queryClient.invalidateQueries({ queryKey: ['multiplayerLeaderboard'] });
       }
 
       return { correct: isCorrect, points: isCorrect ? 1 : 0 };
@@ -1365,8 +1373,29 @@ export function useMultiplayer() {
                 finished_at: new Date().toISOString(),
               })
               .eq('id', currentMatchState.id)
-              .then(() => {
+              .then(async () => {
                 console.log('[Multiplayer] ✅ Match finalizada por timeout');
+                
+                // Adicionar ao histórico para acionar trigger de rating
+                await supabase
+                  .from('multiplayer_history')
+                  .insert({
+                    match_id: currentMatchState.id,
+                    player1_id: currentMatchState.player1.id,
+                    player1_username: currentMatchState.player1.username,
+                    player1_final_score: player1Score,
+                    player2_id: currentMatchState.player2.id,
+                    player2_username: currentMatchState.player2.username,
+                    player2_final_score: player2Score,
+                    winner_id: winnerId,
+                    duration_seconds: gameDuration,
+                  });
+
+                // Invalida caches para refletir mudanças no placar e no rating do usuário
+                if (user?.id) {
+                  queryClient.invalidateQueries({ queryKey: ['userMultiplayerRating', user.id] });
+                }
+                queryClient.invalidateQueries({ queryKey: ['multiplayerLeaderboard'] });
               });
             
             return currentMatchState; // não mudar o estado aqui, deixar o realtime fazer

@@ -75,3 +75,60 @@ export function useUserStats(userId?: string) {
     retryDelay: 1000,
   });
 }
+
+// Interface para Rating Multiplayer
+interface MultiplayerRating {
+  id: string;
+  user_id: string;
+  username: string;
+  rating: number;
+  wins: number;
+  losses: number;
+  total_matches: number;
+  win_rate: number;
+  updated_at: string;
+}
+
+// Leaderboard de Rating Multiplayer
+export function useMultiplayerLeaderboard(limit: number = 10) {
+  return useQuery({
+    queryKey: ['multiplayerLeaderboard', limit],
+    queryFn: async () => {
+      const response = await fetch(`/api/leaderboard/multiplayer?limit=${limit}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch multiplayer leaderboard');
+      }
+      
+      return response.json() as Promise<MultiplayerRating[]>;
+    },
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,
+  });
+}
+
+// Rating Multiplayer de um usuário específico
+export function useUserMultiplayerRating(userId?: string) {
+  return useQuery({
+    queryKey: ['userMultiplayerRating', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      
+      const response = await fetch(`/api/user-multiplayer-rating/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch user multiplayer rating');
+      }
+      
+      return response.json() as Promise<MultiplayerRating>;
+    },
+    enabled: !!userId,
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+}

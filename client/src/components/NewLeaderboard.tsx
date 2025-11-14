@@ -1,8 +1,8 @@
-import { ArrowLeft, Trophy, Zap, Target, Award } from "lucide-react";
+import { ArrowLeft, Trophy, Zap, Target, Award, Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useHighScoreLeaderboard, useXpLeaderboard } from "@/hooks/useLeaderboards";
+import { useHighScoreLeaderboard, useXpLeaderboard, useMultiplayerLeaderboard } from "@/hooks/useLeaderboards";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -12,8 +12,9 @@ interface LeaderboardProps {
 }
 
 export default function NewLeaderboard({ onBack }: LeaderboardProps) {
-  const [activeTab, setActiveTab] = useState<"normal" | "dojo" | "arcade" | "xp">("normal");
+  const [activeTab, setActiveTab] = useState<"multiplayer" | "normal" | "dojo" | "arcade" | "xp">("multiplayer");
   
+  const { data: multiplayerRatings, isLoading: loadingMultiplayer } = useMultiplayerLeaderboard();
   const { data: normalScores, isLoading: loadingNormal } = useHighScoreLeaderboard("normal");
   const { data: dojoScores, isLoading: loadingDojo } = useHighScoreLeaderboard("dojo");
   const { data: arcadeScores, isLoading: loadingArcade } = useHighScoreLeaderboard("arcade");
@@ -29,6 +30,65 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
   const getMedalIcon = (rank: number) => {
     if (rank <= 3) return <Trophy className={`w-5 h-5 ${getMedalColor(rank)}`} />;
     return <span className="text-muted-foreground font-bold">{rank}</span>;
+  };
+
+  const renderMultiplayerTable = (data: any[] | undefined, isLoading: boolean) => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    if (!data || data.length === 0) {
+      return (
+        <Alert>
+          <AlertDescription>
+            Nenhum jogador no ranking ainda. Seja o primeiro!
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return (
+      <div className="space-y-2 mobile-space-y-2">
+        {data.map((player, index) => (
+          <div
+            key={player.id}
+            className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+              index < 3 ? "bg-primary/5 border-primary/20" : "bg-card border-border"
+            } hover:bg-muted/50 mobile-flex-col mobile-gap-3 mobile-text-center mobile-card-padding`}
+          >
+            <div className="flex items-center gap-4 flex-1 mobile-flex-col mobile-gap-2 mobile-text-center">
+              <div className="w-8 flex items-center justify-center">
+                {getMedalIcon(index + 1)}
+              </div>
+              
+              <div className="flex-1 mobile-text-center">
+                <p className="font-bold text-lg mobile-text-base">{player.username}</p>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mobile-justify-center mobile-flex-wrap">
+                  <span>{player.wins}V - {player.losses}D</span>
+                  <span>•</span>
+                  <span>WR: {player.win_rate}%</span>
+                  <span>•</span>
+                  <span>{player.total_matches} partidas</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-right mobile-text-center mobile-w-full">
+              <p className={`text-2xl font-bold mobile-text-xl ${
+                player.rating >= 700 ? 'text-green-500' : player.rating >= 0 ? 'text-yellow-500' : 'text-red-500'
+              }`}>
+                {player.rating}
+              </p>
+              <p className="text-xs text-muted-foreground">rating</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const renderLeaderboardTable = (data: any[] | undefined, isLoading: boolean, scoreKey: string) => {
@@ -122,7 +182,11 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mobile-overflow-x-auto mobile-scroll-smooth mobile-flex mobile-gap-2 mobile-p-2">
+          <TabsList className="grid w-full grid-cols-5 mobile-overflow-x-auto mobile-scroll-smooth mobile-flex mobile-gap-2 mobile-p-2">
+            <TabsTrigger value="multiplayer" className="flex items-center gap-2 mobile-text-xs mobile-tab-wide">
+              <Swords className="w-4 h-4" />
+              PvP
+            </TabsTrigger>
             <TabsTrigger value="normal" className="flex items-center gap-2 mobile-text-xs mobile-tab-wide">
               <Target className="w-4 h-4" />
               Normal
@@ -142,6 +206,23 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
               XP Total
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="multiplayer" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400 mobile-text-base">
+                  <Swords className="w-5 h-5" />
+                  Ranking Multiplayer PvP
+                </CardTitle>
+                <CardDescription className="mobile-text-sm">
+                  Rating competitivo - Inicia em 700, +50 por vitória, -50 por derrota
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="mobile-card-padding">
+                {renderMultiplayerTable(multiplayerRatings, loadingMultiplayer)}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="normal" className="mt-6">
             <Card>

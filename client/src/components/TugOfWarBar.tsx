@@ -23,9 +23,8 @@ export function TugOfWarBar({
   const [prevScoreDiff, setPrevScoreDiff] = useState(0);
   const [flashSide, setFlashSide] = useState<'left' | 'right' | null>(null);
 
-  const scoreDifference = player1Score - player2Score;
-  const barPosition = (scoreDifference / (scoreLimit * 2)) * 100;
-  const clampedPosition = Math.max(-50, Math.min(50, barPosition));
+  // Diferença bruta (P1 - P2)
+  const rawDifference = player1Score - player2Score;
 
   const isPlayer1 = currentUserId === player1Id;
   const myScore = isPlayer1 ? player1Score : player2Score;
@@ -33,30 +32,40 @@ export function TugOfWarBar({
   const myUsername = isPlayer1 ? player1Username : player2Username;
   const opponentUsername = isPlayer1 ? player2Username : player1Username;
 
+  // Diferença do ponto de vista do jogador atual (sempre positiva quando você está na frente)
+  // Se você for P1: myDifference = rawDifference; se for P2: invertido
+  const myDifference = isPlayer1 ? rawDifference : -rawDifference;
+
+  // Posição da barra relativa ao jogador atual
+  // Convenção: quando VOCÊ está ganhando (myDifference > 0), a barra puxa para a ESQUERDA (seu lado)
+  const barPosition = (-(myDifference) / (scoreLimit * 2)) * 100; // negativo puxa para a esquerda
+  const clampedPosition = Math.max(-50, Math.min(50, barPosition));
+
   // Detectar mudanças na pontuação para animação de flash
   useEffect(() => {
-    if (scoreDifference !== prevScoreDiff) {
-      if (scoreDifference > prevScoreDiff) {
+    if (myDifference !== prevScoreDiff) {
+      // Se a sua vantagem aumentou, destaca SEU lado (esquerda). Caso contrário, oponente (direita)
+      if (myDifference > prevScoreDiff) {
         setFlashSide('left');
       } else {
         setFlashSide('right');
       }
-      setPrevScoreDiff(scoreDifference);
+      setPrevScoreDiff(myDifference);
 
       const timeout = setTimeout(() => setFlashSide(null), 500);
       return () => clearTimeout(timeout);
     }
-  }, [scoreDifference, prevScoreDiff]);
+  }, [myDifference, prevScoreDiff]);
 
   // Calcular cor da barra baseado na posição
   const getBarColor = () => {
-    const normalizedPos = clampedPosition / 50; // -1 a 1
+    const normalizedPos = clampedPosition / 50; // -1 a 1, negativo = puxando pro seu lado (esquerda)
     
-    if (normalizedPos < -0.5) return 'from-red-600 to-red-500';
-    if (normalizedPos < -0.2) return 'from-orange-600 to-orange-500';
-    if (normalizedPos > 0.5) return 'from-green-600 to-green-500';
-    if (normalizedPos > 0.2) return 'from-lime-600 to-lime-500';
-    return 'from-yellow-600 to-yellow-500';
+    if (normalizedPos < -0.5) return 'from-green-600 to-green-500'; // você bem à frente
+    if (normalizedPos < -0.2) return 'from-lime-600 to-lime-500';
+    if (normalizedPos > 0.5) return 'from-red-600 to-red-500'; // oponente bem à frente
+    if (normalizedPos > 0.2) return 'from-orange-600 to-orange-500';
+    return 'from-yellow-600 to-yellow-500'; // equilibrado
   };
 
   return (
@@ -144,10 +153,10 @@ export function TugOfWarBar({
       {/* Diferença de pontos */}
       <div className="text-center mt-3 mobile-mt-2">
         <p className="text-sm mobile-text-xs text-muted-foreground">
-          Diferença: <span className={`font-bold ${
-            scoreDifference > 0 ? 'text-green-400' : scoreDifference < 0 ? 'text-red-400' : 'text-foreground'
+          Diferença (você): <span className={`font-bold ${
+            myDifference > 0 ? 'text-green-400' : myDifference < 0 ? 'text-red-400' : 'text-foreground'
           }`}>
-            {scoreDifference > 0 ? '+' : ''}{scoreDifference}
+            {myDifference > 0 ? '+' : ''}{myDifference}
           </span> pontos
           <span className="ml-2 mobile-ml-1 text-muted-foreground/70">
             (Meta: ±{scoreLimit})

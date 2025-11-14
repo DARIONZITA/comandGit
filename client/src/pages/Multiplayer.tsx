@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { useMultiplayerInvite } from '@/hooks/useMultiplayerInvite';
+import { useUserMultiplayerRating } from '@/hooks/useLeaderboards';
 import { MatchmakingScreen } from '@/components/MatchmakingScreen';
 import { MultiplayerModeSelection } from '@/components/MultiplayerModeSelection';
 import { InvitePlayerSearch } from '@/components/InvitePlayerSearch';
@@ -12,7 +13,7 @@ import { OpponentGhost } from '@/components/OpponentGhost';
 import CommandInput from '@/components/CommandInput';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Trophy, Clock, Zap, Home, User, Sword, GitBranch, Activity } from 'lucide-react';
+import { Trophy, Clock, Zap, Home, User, Sword, GitBranch, Activity, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useGameSounds } from '@/hooks/useGameSounds';
 
@@ -20,6 +21,9 @@ export default function Multiplayer() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Buscar rating multiplayer do usuário
+  const { data: userRating } = useUserMultiplayerRating(user?.id);
   
   // Estado do modo de jogo
   const [gameMode, setGameMode] = useState<'select' | 'random' | 'invite'>('select');
@@ -491,8 +495,22 @@ export default function Multiplayer() {
               </span>
             </div>
             
-            <div className="hidden sm:flex items-center gap-2 text-xs text-primary/90 uppercase tracking-widest font-semibold">
-              <Zap className="w-4 h-4" /> Modo Multiplayer
+            <div className="flex items-center gap-3 mobile-w-full mobile-justify-between">
+              {userRating && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/40 rounded-lg">
+                  <Award className="w-4 h-4 text-purple-400" />
+                  <span className={`font-bold text-sm ${userRating.rating >= 700 ? 'text-green-400' : userRating.rating >= 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    {userRating.rating}
+                  </span>
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                    ({userRating.wins}V-{userRating.losses}D)
+                  </span>
+                </div>
+              )}
+              
+              <div className="hidden lg:flex items-center gap-2 text-xs text-primary/90 uppercase tracking-widest font-semibold">
+                <Zap className="w-4 h-4" /> Modo Multiplayer
+              </div>
             </div>
             
             <Button 
@@ -689,6 +707,26 @@ export default function Multiplayer() {
                   Razão: {matchState.winnerReason === 'timeout' ? 'Tempo esgotado' : 'Limite de pontos'}
                 </span>
               </div>
+              
+              {userRating && (
+                <div className="pt-3 border-t border-border">
+                  <div className="flex items-center justify-between gap-2 mobile-flex-col">
+                    <span className="text-sm text-gray-400">Seu Rating Multiplayer:</span>
+                    <div className="flex items-center gap-2">
+                      <Award className="w-5 h-5 text-purple-400" />
+                      <span className={`text-xl font-bold ${userRating.rating >= 700 ? 'text-green-400' : userRating.rating >= 0 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {userRating.rating}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        ({isWinner ? '+50' : '-50'})
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {userRating.wins} vitórias · {userRating.losses} derrotas · WR: {userRating.win_rate}%
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
