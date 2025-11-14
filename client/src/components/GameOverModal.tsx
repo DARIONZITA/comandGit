@@ -24,37 +24,37 @@ export default function GameOverModal({
   failedChallenges = []
 }: GameOverModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-      <Card className="max-w-lg w-full" data-testid="card-gameover">
-        <CardHeader className="text-center space-y-4">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 mobile-padding z-50">
+      <Card className="max-w-lg w-full mobile-modal-full" data-testid="card-gameover">
+        <CardHeader className="text-center space-y-4 mobile-space-y-3 mobile-card-padding">
           {isNewHighScore && (
             <img 
               src={trophyIcon} 
               alt="New High Score!" 
-              className="w-20 h-20 mx-auto"
+              className="w-20 h-20 mx-auto mobile-text-3xl"
               data-testid="img-trophy"
             />
           )}
-          <CardTitle className="text-4xl">
+          <CardTitle className="text-4xl mobile-text-2xl">
             {isNewHighScore ? "NOVO RECORDE!" : "GAME OVER"}
           </CardTitle>
-          <CardDescription className="text-lg">
+          <CardDescription className="text-lg mobile-text-base">
             {isNewHighScore 
               ? "Parabéns! Você estabeleceu um novo recorde!" 
               : "Continue praticando para melhorar!"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-4 bg-muted rounded-md">
-              <p className="text-sm text-muted-foreground mb-1">PONTUAÇÃO FINAL</p>
-              <p className="text-3xl font-bold" data-testid="text-final-score">
+        <CardContent className="space-y-6 mobile-space-y-4 mobile-card-padding">
+          <div className="grid grid-cols-2 gap-4 mobile-grid-cols-1 mobile-gap-3">
+            <div className="text-center p-4 bg-muted rounded-md mobile-p-3">
+              <p className="text-sm text-muted-foreground mb-1 mobile-text-sm">PONTUAÇÃO FINAL</p>
+              <p className="text-3xl font-bold mobile-text-2xl" data-testid="text-final-score">
                 {score.toLocaleString()}
               </p>
             </div>
-            <div className="text-center p-4 bg-muted rounded-md">
-              <p className="text-sm text-muted-foreground mb-1">MAIOR COMBO</p>
-              <p className="text-3xl font-bold text-primary" data-testid="text-max-combo">
+            <div className="text-center p-4 bg-muted rounded-md mobile-p-3">
+              <p className="text-sm text-muted-foreground mb-1 mobile-text-sm">MAIOR COMBO</p>
+              <p className="text-3xl font-bold text-primary mobile-text-2xl" data-testid="text-max-combo">
                 x{combo}
               </p>
             </div>
@@ -116,11 +116,11 @@ export default function GameOverModal({
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 mobile-flex-col mobile-gap-3">
             <Button 
               variant="outline" 
               onClick={onMainMenu} 
-              className="flex-1"
+              className="flex-1 mobile-btn-lg mobile-w-full"
               data-testid="button-menu"
             >
               <Home className="w-4 h-4 mr-2" />
@@ -129,7 +129,7 @@ export default function GameOverModal({
             <Button 
               variant="default" 
               onClick={onRestart} 
-              className="flex-1"
+              className="flex-1 mobile-btn-lg mobile-w-full"
               data-testid="button-restart"
             >
               <RotateCcw className="w-4 h-4 mr-2" />

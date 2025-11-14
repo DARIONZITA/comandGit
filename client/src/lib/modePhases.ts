@@ -44,10 +44,17 @@ export const MODE_PHASES: ModePhaseMap = {
     },
     {
       worldId: 2,
-      title: "Fase 2 • Kata Avançado",
-      description: "Somente para quem já domina 1.5k pontos no dojo.",
+      title: "Fase 2 • Kata Intermediário",
+      description: "Desbloqueia após provar precisão com 1.5k pontos.",
       requiredScore: 1500,
-      badge: "Precisão"
+      badge: "Técnica"
+    },
+    {
+      worldId: 3,
+      title: "Fase 3 • Kata Avançado",
+      description: "Somente para mestres do dojo com 3k pontos.",
+      requiredScore: 3000,
+      badge: "Maestria"
     }
   ],
   arcade: [

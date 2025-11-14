@@ -315,6 +315,15 @@
     50%, 100% { opacity: 0; }
   }
 
+  @keyframes border-glow {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 2px hsl(var(--primary) / 0.8);
+    }
+  }
+
   .falling-block {
     animation: fall linear forwards;
   }
@@ -330,6 +339,10 @@
   .cursor-blink::after {
     content: '▎';
     animation: blink-cursor 1s step-end infinite;
+  }
+
+  .border-glow {
+    animation: border-glow 2s ease-in-out infinite;
   }
 
   .scan-lines {
@@ -360,5 +373,492 @@
       rgba(255, 255, 255, 0.02) 2px,
       rgba(255, 255, 255, 0.02) 4px
     );
+  }
+
+  /* ===== RESPONSIVIDADE MOBILE ===== */
+  /* Aplicada apenas em telas pequenas, sem afetar desktop */
+  
+  @media (max-width: 768px) {
+    /* Layout geral mobile */
+    .min-h-screen {
+      min-height: 100vh;
+      min-height: 100dvh; /* Dynamic viewport height para mobile */
+    }
+
+    /* Ajustes de padding e espaçamento para mobile */
+    .mobile-padding {
+      padding: 1rem !important;
+    }
+
+    /* Texto responsivo */
+    .mobile-text-xs {
+      font-size: 0.75rem !important;
+      line-height: 1rem !important;
+    }
+
+    .mobile-text-sm {
+      font-size: 0.8125rem !important;
+      line-height: 1.125rem !important;
+    }
+
+    .mobile-text-base {
+      font-size: 0.875rem !important;
+      line-height: 1.25rem !important;
+    }
+
+    .mobile-text-lg {
+      font-size: 1rem !important;
+      line-height: 1.5rem !important;
+    }
+
+    .mobile-text-xl {
+      font-size: 1.125rem !important;
+      line-height: 1.5rem !important;
+    }
+
+    .mobile-text-2xl {
+      font-size: 1.25rem !important;
+      line-height: 1.75rem !important;
+    }
+
+    .mobile-text-3xl {
+      font-size: 1.5rem !important;
+      line-height: 2rem !important;
+    }
+
+    .mobile-text-4xl {
+      font-size: 1.75rem !important;
+      line-height: 2rem !important;
+    }
+
+    /* Flexbox mobile */
+    .mobile-flex-col {
+      flex-direction: column !important;
+    }
+
+    .mobile-items-center {
+      align-items: center !important;
+    }
+
+    .mobile-justify-center {
+      justify-content: center !important;
+    }
+
+    /* Grid mobile */
+    .mobile-grid-cols-1 {
+      grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    }
+
+    /* Espaçamento mobile */
+    .mobile-gap-1 {
+      gap: 0.25rem !important;
+    }
+
+    .mobile-gap-2 {
+      gap: 0.5rem !important;
+    }
+
+    .mobile-gap-3 {
+      gap: 0.75rem !important;
+    }
+
+    .mobile-gap-4 {
+      gap: 1rem !important;
+    }
+
+    .mobile-space-y-1 > * + * {
+      margin-top: 0.25rem !important;
+    }
+
+    .mobile-space-y-2 > * + * {
+      margin-top: 0.5rem !important;
+    }
+
+    .mobile-space-y-3 > * + * {
+      margin-top: 0.75rem !important;
+    }
+
+    .mobile-space-y-4 > * + * {
+      margin-top: 1rem !important;
+    }
+
+    .mobile-space-y-6 > * + * {
+      margin-top: 1.5rem !important;
+    }
+
+    /* Largura mobile */
+    .mobile-w-full {
+      width: 100% !important;
+    }
+
+    .mobile-max-w-none {
+      max-width: none !important;
+    }
+
+    /* Posicionamento mobile */
+    .mobile-relative {
+      position: relative !important;
+    }
+
+    .mobile-static {
+      position: static !important;
+    }
+
+    /* Overflow mobile */
+    .mobile-overflow-x-auto {
+      overflow-x: auto !important;
+    }
+
+    /* Botões mobile - tamanhos maiores para touch */
+    .mobile-btn-lg {
+      padding: 0.75rem 1.5rem !important;
+      font-size: 1rem !important;
+      min-height: 44px !important; /* Tamanho mínimo recomendado para touch */
+    }
+
+    .mobile-btn-icon-lg {
+      width: 44px !important;
+      height: 44px !important;
+    }
+
+    /* Cards mobile */
+    .mobile-card-padding {
+      padding: 0.75rem !important;
+    }
+
+    .mobile-card-compact {
+      padding: 0.5rem !important;
+    }
+
+    /* Input mobile */
+    .mobile-input-lg {
+      padding: 0.75rem !important;
+      font-size: 1rem !important;
+      min-height: 44px !important;
+    }
+
+    /* HUD mobile - reorganizar elementos */
+    .mobile-hud-stack {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 0.75rem !important;
+    }
+
+    .mobile-hud-row {
+      flex-direction: row !important;
+      justify-content: space-between !important;
+      width: 100% !important;
+    }
+
+    /* Game area mobile */
+    .mobile-game-area {
+      padding-top: 5rem !important; /* Espaço para HUD mobile compacto */
+      padding-bottom: 5.5rem !important; /* Espaço para input mobile compacto */
+    }
+
+    /* Challenge blocks mobile - tamanhos menores */
+    .mobile-challenge-sm {
+      width: calc(100vw - 1.5rem) !important;
+      max-width: 320px !important;
+    }
+
+    /* Command input mobile - melhor posicionamento */
+    .mobile-command-input {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      padding: 1rem !important;
+      background: hsl(var(--card) / 0.98) !important;
+      backdrop-filter: blur(8px) !important;
+      border-top: 1px solid hsl(var(--border)) !important;
+    }
+
+    /* Command output mobile */
+    .mobile-command-output {
+      bottom: 6rem !important;
+      left: 1rem !important;
+      right: 1rem !important;
+      max-width: none !important;
+    }
+
+    /* Modal mobile - ocupar mais espaço */
+    .mobile-modal-full {
+      width: calc(100vw - 2rem) !important;
+      max-width: none !important;
+      margin: 1rem !important;
+    }
+
+    /* Menu mobile - cards em coluna */
+    .mobile-menu-stack {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 1rem !important;
+    }
+
+    /* Profile mobile */
+    .mobile-profile-stack {
+      flex-direction: column !important;
+      gap: 1.5rem !important;
+    }
+
+    /* Leaderboard mobile */
+    .mobile-leaderboard-scroll {
+      overflow-x: auto !important;
+    }
+
+    /* Hide elements on mobile */
+    .mobile-hidden {
+      display: none !important;
+    }
+
+    /* Show only on mobile */
+    .mobile-only {
+      display: block !important;
+    }
+
+    /* Text alignment mobile */
+    .mobile-text-center {
+      text-align: center !important;
+    }
+
+    /* Margin mobile */
+    .mobile-ml-0 {
+      margin-left: 0 !important;
+    }
+
+    .mobile-mb-1 {
+      margin-bottom: 0.25rem !important;
+    }
+
+    .mobile-mt-1 {
+      margin-top: 0.25rem !important;
+    }
+
+    /* Padding mobile específicos */
+    .mobile-p-2 {
+      padding: 0.5rem !important;
+    }
+
+    .mobile-p-3 {
+      padding: 0.75rem !important;
+    }
+
+    .mobile-px-2 {
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+    }
+
+    .mobile-py-2 {
+      padding-top: 0.5rem !important;
+      padding-bottom: 0.5rem !important;
+    }
+
+    /* Altura mobile */
+    .mobile-h-auto {
+      height: auto !important;
+    }
+
+    /* Overflow mobile específicos */
+    .mobile-overflow-hidden {
+      overflow: hidden !important;
+    }
+
+    /* Flexbox mobile específicos */
+    .mobile-flex-wrap {
+      flex-wrap: wrap !important;
+    }
+
+    .mobile-justify-start {
+      justify-content: flex-start !important;
+    }
+
+    .mobile-justify-between {
+      justify-content: space-between !important;
+    }
+
+    /* Posicionamento mobile específicos */
+    .mobile-top-2 {
+      top: 0.5rem !important;
+    }
+
+    .mobile-right-2 {
+      right: 0.5rem !important;
+    }
+
+    /* Transformações mobile */
+    .mobile-transform-none {
+      transform: none !important;
+    }
+
+    /* Ajustes específicos para game area */
+    .mobile-game-container {
+      padding-top: 6rem !important;
+      padding-bottom: 7rem !important;
+      overflow-x: hidden !important;
+    }
+
+    /* Ajustes para challenge blocks */
+    .mobile-challenge-container {
+      left: 1rem !important;
+      right: 1rem !important;
+      transform: none !important;
+    }
+
+    /* Melhorias para touch targets */
+    .mobile-touch-target {
+      min-height: 44px !important;
+      min-width: 44px !important;
+    }
+
+    /* Scroll suave em mobile */
+    .mobile-scroll-smooth {
+      scroll-behavior: smooth !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+
+    .mobile-tab-wide {
+      min-width: 8.75rem !important;
+    }
+
+    .mobile-max-h-60vh {
+      max-height: 60vh !important;
+    }
+
+    /* HUD específico para mobile - layout compacto vertical */
+    .mobile-hud-compact {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      grid-template-rows: auto auto auto !important;
+      gap: 0.5rem !important;
+      padding: 0.5rem !important;
+    }
+
+    .mobile-hud-item {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 0.25rem 0.5rem !important;
+      font-size: 0.75rem !important;
+    }
+
+    /* Área de jogo com padding ajustado */
+    .mobile-game-area-responsive {
+      padding-top: 7rem !important;
+      padding-bottom: 8rem !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* Input fixo na base com altura mínima para toque */
+    .mobile-input-fixed {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      padding: 0.75rem !important;
+      height: auto !important;
+      min-height: 5rem !important;
+      z-index: 50 !important;
+    }
+
+    /* Desafio visível no mobile */
+    .mobile-challenge-visible {
+      min-height: 200px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+      align-items: center !important;
+      padding: 1rem !important;
+      text-align: center !important;
+    }
+
+    /* Largura mobile específicas */
+    .mobile-w-4 {
+      width: 1rem !important;
+    }
+
+    .mobile-h-4 {
+      height: 1rem !important;
+    }
+
+    .mobile-w-2 {
+      width: 0.5rem !important;
+    }
+
+    .mobile-h-2 {
+      height: 0.5rem !important;
+    }
+
+    .mobile-w-5 {
+      width: 1.25rem !important;
+    }
+
+    .mobile-h-5 {
+      height: 1.25rem !important;
+    }
+
+    .mobile-w-8 {
+      width: 2rem !important;
+    }
+
+    .mobile-h-8 {
+      height: 2rem !important;
+    }
+
+    .mobile-w-3 {
+      width: 0.75rem !important;
+    }
+
+    .mobile-h-3 {
+      height: 0.75rem !important;
+    }
+
+    .mobile-space-x-2 > :not([hidden]) ~ :not([hidden]) {
+      margin-left: 0.5rem !important;
+    }
+
+    .mobile-border-2 {
+      border-width: 2px !important;
+    }
+
+    .mobile-h-10 {
+      height: 2.5rem !important;
+    }
+
+    /* Espaçamento mobile */
+    .mobile-min-w-\[100px\] {
+      min-width: 100px !important;
+    }
+
+    /* Posicionamento mobile */
+    .mobile-bottom-20 {
+      bottom: 5rem !important;
+    }
+
+    .mobile-translate-x-0 {
+      transform: translateX(0) !important;
+    }
+
+    /* Command output centrado */
+    .mobile-left-0 {
+      left: 0 !important;
+    }
+
+    .mobile-right-0 {
+      right: 0 !important;
+    }
+
+    .mobile-top-1\/2 {
+      top: 50% !important;
+    }
+  }
+
+  /* Utilities que só aparecem no desktop */
+  @media (min-width: 769px) {
+    .mobile-only {
+      display: none !important;
+    }
   }
 }

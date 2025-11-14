@@ -16,7 +16,7 @@ export default function ArcadeChallengeBlock({ challenge, position, isExpiring, 
   
   return (
     <div
-      className="absolute w-[500px] transition-all duration-100 select-none"
+      className="absolute w-[500px] max-w-[90vw] transition-all duration-100 select-none"
       style={{
         top: `${position}px`,
         left: left !== undefined ? `${left}px` : '50%',
@@ -24,26 +24,26 @@ export default function ArcadeChallengeBlock({ challenge, position, isExpiring, 
       }}
     >
       <Card 
-        className={`p-4 shadow-2xl border-2 select-none ${
+        className={`p-4 mobile-p-2 shadow-2xl border-2 select-none ${
           isExpiring 
             ? "border-destructive bg-destructive/10 animate-pulse" 
             : "border-orange-500/50 bg-orange-500/5"
         }`}
       >
-        <div className="space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Zap className="w-3 h-3 text-orange-500" />
-              <span className={`text-xs font-bold ${speedColor}`}>
+        <div className="space-y-2 mobile-space-y-1">
+          <div className="flex items-center justify-between mb-2 mobile-mb-1">
+            <div className="flex items-center gap-2 mobile-gap-1">
+              <Zap className="w-3 h-3 mobile-w-2 mobile-h-2 text-orange-500" />
+              <span className={`text-xs mobile-text-xs font-bold ${speedColor}`}>
                 {speedLevel}
               </span>
             </div>
-            <span className="text-xs font-bold text-orange-500">
+            <span className="text-xs mobile-text-xs font-bold text-orange-500">
               +{challenge.points}
             </span>
           </div>
 
-          <div className="font-mono text-xl font-bold bg-muted/50 p-3 rounded-md border border-orange-500/30 text-center text-orange-600 dark:text-orange-400 select-none">
+          <div className="font-mono text-xl mobile-text-base font-bold bg-muted/50 p-3 mobile-p-2 rounded-md border border-orange-500/30 text-center text-orange-600 dark:text-orange-400 select-none">
             {challenge.correctAnswer}
           </div>
         </div>

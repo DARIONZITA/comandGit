@@ -10,7 +10,7 @@ interface ChallengeBlockProps {
 export default function ChallengeBlock({ challenge, position, isExpiring }: ChallengeBlockProps) {
   return (
     <Card
-      className={`absolute left-1/2 -translate-x-1/2 w-[90%] max-w-2xl p-6 border-2 ${
+      className={`absolute left-1/2 -translate-x-1/2 w-[90%] max-w-2xl p-6 mobile-challenge-sm mobile-card-compact mobile-challenge-container border-2 ${
         isExpiring ? 'pulse-glow border-destructive' : 'border-primary/30'
       }`}
       style={{
@@ -18,11 +18,11 @@ export default function ChallengeBlock({ challenge, position, isExpiring }: Chal
       }}
       data-testid={`card-challenge-${challenge.id}`}
     >
-      <div className="flex items-start justify-between gap-4">
-        <p className="text-lg font-semibold leading-relaxed flex-1" data-testid="text-scenario">
+      <div className="flex items-start justify-between gap-4 mobile-flex-col mobile-gap-1">
+        <p className="text-lg font-semibold leading-relaxed flex-1 mobile-text-sm mobile-w-full" data-testid="text-scenario">
           {challenge.scenario}
         </p>
-        <Badge variant="secondary" className="text-xs font-bold shrink-0" data-testid="badge-points">
+        <Badge variant="secondary" className="text-xs font-bold shrink-0 mobile-text-xs mobile-w-full mobile-text-center" data-testid="badge-points">
           +{challenge.points}
         </Badge>
       </div>

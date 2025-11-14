@@ -88,13 +88,29 @@ export default function Multiplayer() {
     }
   }, [matchState, user]);
 
-  // Quando o convite for aceito (remetente), mudar para modo random
+  // Quando o convite for aceito (remetente), aguardar match ser criada
+  // O listener global do useMultiplayer detectará a match automaticamente
   useEffect(() => {
     if (sentInvite?.status === 'accepted' && gameMode === 'invite') {
-      console.log('[Multiplayer] Convite aceito! Mudando para modo random');
-      setGameMode('random');
+      console.log('[Multiplayer] Convite aceito! Match será detectada pelo listener global');
+      // NÃO mudar para 'random' - o useMultiplayer detectará a match criada pelo convite
+      // Apenas limpar o convite enviado após alguns segundos
+      const timeout = setTimeout(() => {
+        // A match já deve ter sido detectada neste ponto
+      }, 2000);
+      return () => clearTimeout(timeout);
     }
   }, [sentInvite?.status, gameMode]);
+
+  // Quando match for detectada via convite, sair da tela de seleção
+  useEffect(() => {
+    if (matchState && (gameMode === 'invite' || gameMode === 'select')) {
+      console.log('[Multiplayer] Match detectada via convite! Saindo da tela de seleção');
+      // A match foi criada, então podemos tratar como se estivesse em modo 'random'
+      // para que as telas corretas sejam exibidas
+      setGameMode('random');
+    }
+  }, [matchState, gameMode]);
 
   const handleCancel = () => {
     leaveQueue();
@@ -128,11 +144,12 @@ export default function Multiplayer() {
       const matchId = await acceptInvite(inviteId);
       toast({
         title: "Convite Aceito!",
-        description: "Preparando partida...",
+        description: "Conectando com o jogador...",
       });
-      // Mudar para modo "random" para garantir que o fluxo de match funcione
-      setGameMode('random');
+      // NÃO mudar para 'random' - manter em 'invite' ou 'select'
       // O useMultiplayer detectará a nova match via listener global
+      // e atualizará matchState automaticamente
+      console.log('[Multiplayer] Convite aceito, aguardando match ser detectada:', matchId);
     } catch (error: any) {
       toast({
         title: "Erro ao aceitar convite",
@@ -319,30 +336,30 @@ export default function Multiplayer() {
     };
 
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines">
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines mobile-padding mobile-scroll-smooth">
         <InviteNotification
           invites={receivedInvites}
           onAccept={handleAcceptInvite}
           onReject={handleRejectInvite}
         />
-        <div className="max-w-2xl w-full space-y-8">
+        <div className="max-w-2xl w-full space-y-8 mobile-space-y-6">
           <div className="text-center space-y-4">
             <Trophy className="w-24 h-24 text-primary mx-auto mb-4 animate-bounce" />
-            <h1 className="text-6xl font-bold tracking-tight">
+            <h1 className="text-6xl font-bold tracking-tight mobile-text-3xl">
               OPONENTE
               <br />
               <span className="text-primary">ENCONTRADO!</span>
             </h1>
-            <p className="text-xl text-muted-foreground">
+            <p className="text-xl text-muted-foreground mobile-text-base">
               Você vai enfrentar <span className="text-primary font-bold">{opponentUsername}</span>
             </p>
           </div>
 
           <Card className="hover-elevate border-2 border-primary/20">
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 mobile-card-padding">
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-lg bg-card">
-                  <span className="text-lg font-semibold">Você</span>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-card mobile-flex-col mobile-gap-2 mobile-text-center">
+                  <span className="text-lg font-semibold mobile-text-base">Você</span>
                   {myReadyStatus ? (
                     <span className="text-primary font-bold flex items-center gap-2">
                       <span className="w-3 h-3 bg-primary rounded-full animate-pulse"></span>
@@ -352,8 +369,8 @@ export default function Multiplayer() {
                     <span className="text-muted-foreground">Aguardando...</span>
                   )}
                 </div>
-                <div className="flex items-center justify-between p-4 rounded-lg bg-card">
-                  <span className="text-lg font-semibold">{opponentUsername}</span>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-card mobile-flex-col mobile-gap-2 mobile-text-center">
+                  <span className="text-lg font-semibold mobile-text-base">{opponentUsername}</span>
                   {opponentReadyStatus ? (
                     <span className="text-primary font-bold flex items-center gap-2">
                       <span className="w-3 h-3 bg-primary rounded-full animate-pulse"></span>
@@ -372,16 +389,16 @@ export default function Multiplayer() {
               <Button
                 onClick={handleReady}
                 size="lg"
-                className="w-full py-6 text-xl font-bold"
+                className="w-full py-6 text-xl font-bold mobile-btn-lg"
               >
                 Estou Pronto!
               </Button>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mobile-grid-cols-1">
                 <Button
                   onClick={changeOpponent}
                   variant="outline"
                   size="lg"
-                  className="w-full border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                  className="w-full border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10 mobile-btn-lg"
                 >
                   Trocar Oponente
                 </Button>
@@ -389,7 +406,7 @@ export default function Multiplayer() {
                   onClick={handleCancelMatch}
                   variant="outline"
                   size="lg"
-                  className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+                  className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 mobile-btn-lg"
                 >
                   Cancelar
                 </Button>
@@ -398,18 +415,18 @@ export default function Multiplayer() {
           ) : (
             <div className="space-y-4">
               <Card className="border-2 border-primary/30 bg-primary/5">
-                <CardContent className="pt-6">
-                  <p className="text-center text-muted-foreground">
+                <CardContent className="pt-6 mobile-card-padding">
+                  <p className="text-center text-muted-foreground mobile-text-sm">
                     ⏳ Aguardando <strong>{opponentUsername}</strong> ficar pronto...
                   </p>
                 </CardContent>
               </Card>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mobile-grid-cols-1">
                 <Button
                   onClick={changeOpponent}
                   variant="outline"
                   size="lg"
-                  className="w-full border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10"
+                  className="w-full border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10 mobile-btn-lg"
                 >
                   Trocar Oponente
                 </Button>
@@ -417,7 +434,7 @@ export default function Multiplayer() {
                   onClick={handleCancelMatch}
                   variant="outline"
                   size="lg"
-                  className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+                  className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 mobile-btn-lg"
                 >
                   Cancelar
                 </Button>
@@ -444,7 +461,7 @@ export default function Multiplayer() {
 
     if (!currentChallenge) {
       return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+        <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
           <div className="text-center">
             <Trophy className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold">Carregando desafios...</h2>
@@ -454,7 +471,7 @@ export default function Multiplayer() {
     }
 
     return (
-      <div className="min-h-screen w-full bg-black text-white relative overflow-hidden scan-lines">
+      <div className="min-h-screen w-full bg-background text-foreground relative overflow-hidden scan-lines mobile-scroll-smooth">
         <InviteNotification
           invites={receivedInvites}
           onAccept={handleAcceptInvite}
@@ -464,10 +481,10 @@ export default function Multiplayer() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.15),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(6,182,212,0.1),transparent_50%)]" />
         
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 space-y-4 relative z-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 space-y-4 relative z-10 mobile-space-y-3">
           {/* HEADER */}
-          <div className="flex items-center justify-between gap-3 bg-gray-900/80 backdrop-blur-md rounded-lg px-4 py-3 border border-primary/30 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3 bg-card/80 backdrop-blur-md rounded-lg px-4 py-3 border border-primary/30 shadow-[0_0_15px_rgba(16,185,129,0.3)] mobile-flex-col mobile-items-start mobile-gap-2">
+            <div className="flex items-center gap-3 mobile-w-full mobile-justify-between">
               <Clock className={`w-6 h-6 ${timeRemaining <= 30 ? 'text-red-400 animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'text-primary drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]'}`} />
               <span className={`text-2xl sm:text-3xl font-bold font-mono ${timeRemaining <= 30 ? 'text-red-400' : 'text-primary'}`}>
                 {formattedTime}
@@ -482,30 +499,33 @@ export default function Multiplayer() {
               onClick={async () => { await cancelMatch(); setLocation('/'); }} 
               variant="outline" 
               size="sm" 
-              className="border-primary/50 hover:bg-primary/10 hover:border-primary text-primary"
+              className="border-primary/50 hover:bg-primary/10 hover:border-primary text-primary mobile-btn-lg mobile-w-full"
             >
               <Home className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Sair</span>
+              <span className="sm:hidden">Menu</span>
             </Button>
           </div>
 
           {/* BARRA DE CABO DE GUERRA */}
-          <TugOfWarBar
-            player1Username={matchState.player1.username}
-            player1Score={matchState.player1.score}
-            player2Username={matchState.player2.username}
-            player2Score={matchState.player2.score}
-            scoreLimit={matchState.scoreLimit}
-            currentUserId={user?.id || ''}
-            player1Id={matchState.player1.id}
-          />
+          <div className="mobile-overflow-x-auto mobile-scroll-smooth">
+            <TugOfWarBar
+              player1Username={matchState.player1.username}
+              player1Score={matchState.player1.score}
+              player2Username={matchState.player2.username}
+              player2Score={matchState.player2.score}
+              scoreLimit={matchState.scoreLimit}
+              currentUserId={user?.id || ''}
+              player1Id={matchState.player1.id}
+            />
+          </div>
 
           {/* GRID PRINCIPAL: Desafio (70%) + Oponente (30%) */}
-          <div className="grid lg:grid-cols-10 gap-4">
+          <div className="grid lg:grid-cols-10 gap-4 mobile-gap-3">
             {/* PAINEL DO DESAFIO */}
             <div className="lg:col-span-7">
-              <div className="bg-gray-900/90 backdrop-blur-md rounded-xl border-2 border-primary/40 shadow-[0_0_20px_rgba(16,185,129,0.3)] overflow-hidden hover-elevate min-h-[400px] flex flex-col">
-                <div className="px-4 py-3 bg-gradient-to-r from-primary/20 to-cyan-500/20 border-b border-primary/40 flex items-center justify-between">
+              <div className="bg-card/90 backdrop-blur-md rounded-xl border-2 border-primary/40 shadow-[0_0_20px_rgba(16,185,129,0.3)] overflow-hidden hover-elevate min-h-[400px] flex flex-col">
+                <div className="px-4 py-3 bg-gradient-to-r from-primary/20 to-cyan-500/20 border-b border-primary/40 flex items-center justify-between mobile-flex-col mobile-items-start mobile-gap-2">
                   <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-widest">
                     <GitBranch className="w-5 h-5" />
                     {currentChallenge.compositeId ? (
@@ -514,12 +534,12 @@ export default function Multiplayer() {
                       <span>Seu Desafio</span>
                     )}
                   </div>
-                  <span className="text-xs text-primary/70 font-mono bg-black/30 px-2 py-1 rounded">
+                  <span className="text-xs text-primary/70 font-mono bg-muted/30 px-2 py-1 rounded">
                     #{(isPlayer1 ? matchState.player1.currentChallenge : matchState.player2.currentChallenge) + 1}
                   </span>
                 </div>
                 
-                <div className="p-8 space-y-8 flex-1 flex flex-col justify-center">
+                <div className="p-8 space-y-8 flex-1 flex flex-col justify-center mobile-card-padding mobile-space-y-4">
                   <div className="space-y-4">
                     {currentChallenge.compositeId && (
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/40 rounded-lg text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-2">
@@ -538,13 +558,13 @@ export default function Multiplayer() {
                         <span>Passo {currentChallenge.stepNumber} de {currentChallenge.totalSteps}</span>
                       </div>
                     )}
-                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary leading-relaxed break-words drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary leading-relaxed break-words drop-shadow-[0_0_10px_rgba(16,185,129,0.5)] mobile-text-lg">
                       {currentChallenge.question}
                     </h2>
                     <div className="w-full h-px bg-gradient-to-r from-primary/60 via-primary/30 to-transparent"></div>
                   </div>
                   
-                  <div className="space-y-3 mt-auto">
+                  <div className="space-y-3 mt-auto mobile-space-y-2">
                     <CommandInput
                       key={inputKey}
                       onSubmit={handleSubmit}
@@ -552,9 +572,9 @@ export default function Multiplayer() {
                       disabled={false}
                       sounds={sounds}
                     />
-                    <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 mobile-text-xs">
                       <Activity className="w-3.5 h-3.5" />
-                      Pressione <kbd className="px-1.5 py-0.5 bg-gray-700 rounded text-primary text-xs font-mono">Enter</kbd> para submeter
+                      Pressione <kbd className="px-1.5 py-0.5 bg-muted rounded text-primary text-xs font-mono">Enter</kbd> para submeter
                     </p>
                   </div>
                 </div>
@@ -562,10 +582,10 @@ export default function Multiplayer() {
             </div>
 
             {/* PAINEL LATERAL COMPACTO: Oponente + Stats */}
-            <div className="lg:col-span-3 space-y-3">
+            <div className="lg:col-span-3 space-y-3 mobile-space-y-3">
               {/* Card Oponente */}
-              <div className="bg-gray-900/90 backdrop-blur-md rounded-xl border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)] overflow-hidden">
-                <div className="px-3 py-2 bg-red-900/30 border-b border-red-700/50 flex items-center justify-between">
+              <div className="bg-card/90 backdrop-blur-md rounded-xl border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)] overflow-hidden">
+                <div className="px-3 py-2 bg-red-900/30 border-b border-red-700/50 flex items-center justify-between mobile-flex-col mobile-items-start mobile-gap-1">
                   <div className="flex items-center gap-1.5 text-red-400 font-bold text-xs uppercase">
                     <Sword className="w-4 h-4" />
                     Oponente
@@ -576,7 +596,7 @@ export default function Multiplayer() {
                   </div>
                 </div>
                 
-                <div className="p-3">
+                <div className="p-3 mobile-card-padding">
                   <OpponentGhost
                     opponentUsername={opponentUsername}
                     inputLength={opponentActivity.inputLength}
@@ -586,20 +606,20 @@ export default function Multiplayer() {
               </div>
 
               {/* Stats */}
-              <div className="bg-gray-900/80 backdrop-blur-md rounded-xl border border-cyan-500/40 p-3 space-y-2.5">
+              <div className="bg-card/80 backdrop-blur-md rounded-xl border border-cyan-500/40 p-3 space-y-2.5 mobile-card-padding">
                 <h3 className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest flex items-center gap-1.5">
                   <Trophy className="w-3 h-3" /> Estatísticas
                 </h3>
                 
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center py-1.5 px-2 bg-primary/10 rounded border-l-2 border-primary">
-                    <span className="text-xs text-gray-300">Seu progresso:</span>
+                  <div className="flex justify-between items-center py-1.5 px-2 bg-primary/10 rounded border-l-2 border-primary mobile-flex-col mobile-items-start mobile-gap-1">
+                    <span className="text-xs text-muted-foreground">Seu progresso:</span>
                     <span className="text-sm font-bold text-primary font-mono">
                       Desafio {(isPlayer1 ? matchState.player1.currentChallenge : matchState.player2.currentChallenge) + 1}
                     </span>
                   </div>
                   
-                  <div className="flex justify-between items-center py-1.5 px-2 bg-red-500/10 rounded border-l-2 border-red-500">
+                  <div className="flex justify-between items-center py-1.5 px-2 bg-red-500/10 rounded border-l-2 border-red-500 mobile-flex-col mobile-items-start mobile-gap-1">
                     <span className="text-xs text-gray-300">Progresso oponente:</span>
                     <span className="text-sm font-bold text-red-400 font-mono">
                       Desafio {(isPlayer1 ? matchState.player2.currentChallenge : matchState.player1.currentChallenge) + 1}
@@ -628,61 +648,61 @@ export default function Multiplayer() {
     const opponentScore = isPlayer1 ? matchState.player2.score : matchState.player1.score;
 
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white p-4">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white p-4 mobile-padding mobile-scroll-smooth">
         <InviteNotification
           invites={receivedInvites}
           onAccept={handleAcceptInvite}
           onReject={handleRejectInvite}
         />
-        <div className="max-w-2xl w-full space-y-8 text-center">
+        <div className="max-w-2xl w-full space-y-8 text-center mobile-space-y-6">
           <div>
             {isWinner ? (
               <>
                 <Trophy className="w-32 h-32 text-yellow-400 mx-auto mb-4 animate-bounce" />
-                <h1 className="text-5xl font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent mb-2">
+                <h1 className="text-5xl font-bold bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent mb-2 mobile-text-3xl">
                   Vitória!
                 </h1>
-                <p className="text-2xl text-gray-300">Você venceu a batalha! 🎉</p>
+                <p className="text-2xl text-gray-300 mobile-text-base">Você venceu a batalha! 🎉</p>
               </>
             ) : (
               <>
                 <div className="w-32 h-32 mx-auto mb-4 flex items-center justify-center text-6xl">😔</div>
-                <h1 className="text-5xl font-bold text-gray-400 mb-2">Derrota</h1>
-                <p className="text-2xl text-gray-300">Não desista, tente novamente!</p>
+                <h1 className="text-5xl font-bold text-muted-foreground mb-2 mobile-text-3xl">Derrota</h1>
+                <p className="text-2xl text-foreground mobile-text-base">Não desista, tente novamente!</p>
               </>
             )}
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-8 border border-gray-700">
-            <h2 className="text-xl font-semibold mb-4">Resultado Final</h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-lg">Sua pontuação:</span>
-                <span className="text-2xl font-bold text-blue-400">{finalScore}</span>
+          <div className="bg-card/50 backdrop-blur-sm rounded-lg p-8 border border-border mobile-card-padding">
+            <h2 className="text-xl font-semibold mb-4 mobile-text-lg">Resultado Final</h2>
+            <div className="space-y-3 mobile-space-y-2">
+              <div className="flex justify-between items-center mobile-flex-col mobile-gap-1">
+                <span className="text-lg mobile-text-base">Sua pontuação:</span>
+                <span className="text-2xl font-bold text-blue-400 mobile-text-xl">{finalScore}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-lg">Oponente:</span>
-                <span className="text-2xl font-bold text-red-400">{opponentScore}</span>
+              <div className="flex justify-between items-center mobile-flex-col mobile-gap-1">
+                <span className="text-lg mobile-text-base">Oponente:</span>
+                <span className="text-2xl font-bold text-red-400 mobile-text-xl">{opponentScore}</span>
               </div>
-              <div className="pt-3 border-t border-gray-700">
-                <span className="text-sm text-gray-400">
+              <div className="pt-3 border-t border-border">
+                <span className="text-sm text-gray-400 mobile-text-xs">
                   Razão: {matchState.winnerReason === 'timeout' ? 'Tempo esgotado' : 'Limite de pontos'}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 mobile-space-y-2">
             <Button
               onClick={() => window.location.reload()}
-              className="w-full py-6 text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400"
+              className="w-full py-6 text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 mobile-btn-lg"
             >
               Jogar Novamente
             </Button>
             <Button
               onClick={() => setLocation('/')}
               variant="outline"
-              className="w-full py-6 text-xl font-bold border-gray-600"
+              className="w-full py-6 text-xl font-bold border-gray-600 mobile-btn-lg"
             >
               Voltar ao Menu
             </Button>

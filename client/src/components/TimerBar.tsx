@@ -11,8 +11,15 @@ interface TimerBarProps {
 
 export default function TimerBar({ duration, onTimeout, isPaused, isActive, onCriticalTime }: TimerBarProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
-  const [startTime] = useState(Date.now());
+  const [startTime, setStartTime] = useState(Date.now());
   const [tickTockStarted, setTickTockStarted] = useState(false);
+
+  // Resetar timer quando duration mudar (novo desafio)
+  useEffect(() => {
+    setTimeLeft(duration);
+    setStartTime(Date.now());
+    setTickTockStarted(false);
+  }, [duration]);
 
   useEffect(() => {
     if (!isActive) {

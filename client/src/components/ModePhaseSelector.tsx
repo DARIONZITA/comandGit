@@ -22,26 +22,26 @@ export function ModePhaseSelector({ mode, bestScore, onBack, onSelectPhase }: Mo
   const phases = MODE_PHASES[mode] ?? [];
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8">
-      <div className="max-w-4xl w-full space-y-8">
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={onBack} className="gap-2">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 mobile-padding mobile-scroll-smooth">
+      <div className="max-w-4xl w-full space-y-8 mobile-space-y-6">
+        <div className="flex items-center justify-between mobile-flex-col mobile-items-start mobile-gap-3 mobile-w-full">
+          <Button variant="ghost" onClick={onBack} className="gap-2 mobile-w-full mobile-justify-center">
             <ArrowLeft className="w-4 h-4" />
             Voltar
           </Button>
-          <Badge variant="secondary" className="text-sm">
+          <Badge variant="secondary" className="text-sm mobile-text-xs mobile-w-full mobile-text-center">
             Melhor pontuação: {bestScore.toLocaleString()}
           </Badge>
         </div>
 
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">{MODE_TITLES[mode]}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold tracking-tight mobile-text-2xl">{MODE_TITLES[mode]}</h1>
+          <p className="text-muted-foreground mobile-text-sm">
             Escolha a fase que deseja enfrentar. Fases bloqueadas exigem pontuação mínima no mesmo modo.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 mobile-grid-cols-1 mobile-gap-3">
           {phases.map((phase) => {
             const unlocked = isPhaseUnlocked(mode, phase.worldId, bestScore);
 
@@ -59,21 +59,21 @@ export function ModePhaseSelector({ mode, bestScore, onBack, onSelectPhase }: Mo
                     </p>
                   </div>
                 )}
-                <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <CardHeader className="flex flex-row items-start justify-between gap-4 mobile-flex-col mobile-items-start mobile-gap-2">
                   <div>
-                    <CardTitle>{phase.title}</CardTitle>
-                    <CardDescription>{phase.description}</CardDescription>
+                    <CardTitle className="mobile-text-lg">{phase.title}</CardTitle>
+                    <CardDescription className="mobile-text-sm">{phase.description}</CardDescription>
                   </div>
                   {phase.badge && (
-                    <Badge variant="outline">{phase.badge}</Badge>
+                    <Badge variant="outline" className="mobile-text-xs">{phase.badge}</Badge>
                   )}
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mobile-text-sm">
                     Requer {phase.requiredScore.toLocaleString()} pontos para desbloquear.
                   </p>
                   {unlocked && (
-                    <Button className="mt-4" variant="secondary">
+                    <Button className="mt-4 mobile-w-full mobile-btn-lg" variant="secondary">
                       Jogar fase
                     </Button>
                   )}

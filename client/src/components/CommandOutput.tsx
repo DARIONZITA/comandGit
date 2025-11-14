@@ -26,13 +26,15 @@ export default function CommandOutput({ output, show, isError = false }: Command
       className={`
         fixed bottom-24 left-1/2 -translate-x-1/2 
         max-w-3xl w-full px-8
-        transition-all duration-300
+        mobile-top-1/2 mobile-left-0 mobile-right-0 mobile-translate-x-0 mobile-px-4
+        transition-all duration-300 z-30
         ${show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
       `}
     >
       <div 
         className={`
           font-mono text-sm p-4 rounded-lg border-2
+          mobile-text-xs mobile-p-2
           ${isError 
             ? 'bg-red-950/50 border-red-500/50 text-red-300' 
             : 'bg-muted/95 border-primary/30 text-foreground'

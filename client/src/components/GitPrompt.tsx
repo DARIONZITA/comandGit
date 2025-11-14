@@ -6,7 +6,7 @@ interface GitPromptProps {
 }
 
 export default function GitPrompt({ 
-  username = "usuario",
+  username = "player",
   hostname = "git-game",
   workingDirectory,
   currentBranch 

@@ -27,10 +27,10 @@ export function MatchmakingScreen({ isSearching, onCancel }: MatchmakingScreenPr
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines">
-      <div className="max-w-2xl w-full space-y-8">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines mobile-padding mobile-scroll-smooth">
+      <div className="max-w-2xl w-full space-y-8 mobile-space-y-6">
         {/* Ícone animado */}
-        <div className="relative w-40 h-40 mx-auto mb-8">
+        <div className="relative w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-8">
           <div className="absolute inset-0 flex items-center justify-center">
             <Swords className="w-20 h-20 text-primary animate-pulse" />
           </div>
@@ -47,12 +47,12 @@ export function MatchmakingScreen({ isSearching, onCancel }: MatchmakingScreenPr
 
         {/* Título */}
         <div className="text-center space-y-4">
-          <h1 className="text-6xl font-bold tracking-tight">
+          <h1 className="text-6xl font-bold tracking-tight mobile-text-3xl">
             PROCURANDO
             <br />
             <span className="text-primary">OPONENTE</span>
           </h1>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-muted-foreground mobile-text-base">
             Preparando uma batalha épica...
           </p>
         </div>
@@ -60,7 +60,7 @@ export function MatchmakingScreen({ isSearching, onCancel }: MatchmakingScreenPr
         {/* Animação de loading */}
         <div className="flex items-center justify-center space-x-3 py-8">
           <Zap className="w-8 h-8 text-primary animate-pulse" />
-          <span className="text-2xl font-bold font-mono">
+          <span className="text-2xl font-bold font-mono mobile-text-xl">
             <span className="inline-block animate-pulse">.</span>
             <span className="inline-block animate-pulse animation-delay-200">.</span>
             <span className="inline-block animate-pulse animation-delay-400">.</span>
@@ -75,8 +75,8 @@ export function MatchmakingScreen({ isSearching, onCancel }: MatchmakingScreenPr
               <CardTitle className="text-lg">Sistema de Matchmaking Ativo</CardTitle>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm">
+          <CardContent className="mobile-card-padding">
+            <div className="space-y-3 text-sm mobile-text-sm">
               <div className="flex items-start space-x-3">
                 <span className="text-primary font-bold">✓</span>
                 <p className="text-left text-muted-foreground">Conectando com jogadores do mesmo nível</p>
@@ -95,8 +95,8 @@ export function MatchmakingScreen({ isSearching, onCancel }: MatchmakingScreenPr
 
         {/* Dica */}
         <Card className="border-2 border-primary/30 bg-primary/5">
-          <CardContent className="pt-6">
-            <p className="text-sm text-center">
+          <CardContent className="pt-6 mobile-card-padding">
+            <p className="text-sm text-center mobile-text-sm">
               💡 <strong>Dica:</strong> Prepare-se! A batalha começa assim que encontrarmos um oponente.
             </p>
           </CardContent>
@@ -107,7 +107,7 @@ export function MatchmakingScreen({ isSearching, onCancel }: MatchmakingScreenPr
           onClick={onCancel}
           variant="outline"
           size="lg"
-          className="w-full border-destructive/50 text-destructive hover:bg-destructive/10"
+          className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 mobile-btn-lg"
         >
           Cancelar Busca
         </Button>

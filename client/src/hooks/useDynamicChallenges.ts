@@ -307,13 +307,13 @@ export function useDynamicChallenges() {
             console.log('[Hook] Variables to substitute:', variables);
             Object.entries(variables).forEach(([key, value]) => {
               console.log('[Hook] Processing variable:', key, '=', value);
-              // Remover colchetes da chave se existirem
-              const cleanKey = key.replace(/^\[|\]$/g, '');
+              // Suporta tanto {{variable}} quanto variable
+              const cleanKey = key.replace(/^\{\{|\}\}$/g, '');
               console.log('[Hook] Clean key:', cleanKey);
-              // Criar padrão com colchetes
-              const placeholder = `[${cleanKey}]`;
+              // Criar padrão com chaves duplas
+              const placeholder = `{{${cleanKey}}}`;
               console.log('[Hook] Looking for placeholder:', placeholder);
-              const regex = new RegExp(placeholder.replace(/[[\]]/g, '\\$&'), 'g');
+              const regex = new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g');
               const beforeReplace = answer;
               answer = answer.replace(regex, String(value));
               console.log('[Hook] Replace:', beforeReplace, '->', answer);

@@ -37,10 +37,10 @@ export default function DojoInput({ blankText, expectedAnswer, onSubmit, disable
   const parts = blankText.split(/(\[_+\])/g);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border p-6">
-      <div className="max-w-4xl mx-auto space-y-4">
-        {/* Mostra o comando com a lacuna */}
-        <div className="font-mono text-lg flex items-center gap-2 flex-wrap">
+    <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border p-6 mobile-input-fixed">
+      <div className="max-w-4xl mx-auto space-y-4 mobile-space-y-2">
+        {/* Mostra o comando com a lacuna - OCULTO NO MOBILE E DESKTOP */}
+        <div className="hidden">
           {parts.map((part, idx) => {
             if (part.match(/\[_+\]/)) {
               return (
@@ -53,7 +53,7 @@ export default function DojoInput({ blankText, expectedAnswer, onSubmit, disable
           })}
         </div>
 
-        <form onSubmit={handleSubmit} className="flex gap-2">
+        <form onSubmit={handleSubmit} className="flex gap-2 mobile-gap-1">
           <div className="flex-1 relative">
             <Input
               ref={inputRef}
@@ -62,7 +62,7 @@ export default function DojoInput({ blankText, expectedAnswer, onSubmit, disable
               onChange={(e) => setInput(e.target.value)}
               placeholder="Digite apenas o que falta..."
               disabled={disabled}
-              className={`font-mono text-lg ${shake ? "animate-shake" : ""}`}
+              className={`font-mono text-lg mobile-text-sm mobile-px-2 mobile-py-2 ${shake ? "animate-shake" : ""}`}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
@@ -73,8 +73,9 @@ export default function DojoInput({ blankText, expectedAnswer, onSubmit, disable
             type="submit" 
             disabled={disabled || !input.trim()}
             size="lg"
+            className="mobile-px-3 mobile-py-2"
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-5 h-5 mobile-w-4 mobile-h-4" />
           </Button>
         </form>
 

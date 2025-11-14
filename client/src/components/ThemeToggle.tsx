@@ -30,6 +30,7 @@ export default function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
+      className="mobile-btn-icon-lg"
       data-testid="button-theme-toggle"
     >
       {theme === "dark" ? (

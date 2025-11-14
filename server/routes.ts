@@ -375,7 +375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Fallback: buscar das transições (método antigo)
+      // Fallback: buscar das transições para multi-step
       const { data: transitions, error } = await supabase
         .from('valid_transitions')
         .select('answer_pattern, step_order, is_final_step')
@@ -387,22 +387,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Erro ao buscar respostas' });
       }
 
-      // Extrair patterns de resposta (simplificados)
-      const answers = transitions?.map(t => {
-        // Remover regex para mostrar formato legível
-        let pattern = t.answer_pattern
-          .replace(/\^/g, '')
-          .replace(/\$/g, '')
-          .replace(/\\s\+/g, ' ')
-          .replace(/\\/g, '');
-        
-        return pattern;
-      }) || [];
+      // Extrair patterns de resposta com variáveis (para substituição no frontend)
+      const answers = transitions?.map(t => t.answer_pattern) || [];
+
+      console.log('[ANSWERS] Returning transition patterns with variables:', answers);
 
       res.json({ 
         answers,
         isMultiStep: transitions && transitions.length > 1,
-        hasTemplate: false
+        hasTemplate: true  // Mudado para true para que o frontend substitua variáveis
       });
     } catch (error) {
       console.error('[ANSWERS] Error:', error);

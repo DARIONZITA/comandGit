@@ -53,7 +53,7 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
     }
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-2 mobile-space-y-2">
         {data.map((player, index) => {
           const scoreValue = player[scoreKey as keyof typeof player] || 0;
           console.log('[Leaderboard] Player:', { player, scoreKey, scoreValue });
@@ -63,16 +63,16 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
               key={player.id}
               className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
                 index < 3 ? "bg-primary/5 border-primary/20" : "bg-card border-border"
-              } hover:bg-muted/50`}
+              } hover:bg-muted/50 mobile-flex-col mobile-gap-3 mobile-text-center mobile-card-padding`}
             >
-              <div className="flex items-center gap-4 flex-1">
+              <div className="flex items-center gap-4 flex-1 mobile-flex-col mobile-gap-2 mobile-text-center">
                 <div className="w-8 flex items-center justify-center">
                   {getMedalIcon(index + 1)}
                 </div>
                 
-                <div className="flex-1">
-                  <p className="font-bold text-lg">{player.username}</p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex-1 mobile-text-center">
+                  <p className="font-bold text-lg mobile-text-base">{player.username}</p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mobile-justify-center mobile-flex-wrap">
                     <Award className="w-3 h-3" />
                     <span>Nível {player.level}</span>
                     {player.max_combo > 0 && (
@@ -85,8 +85,8 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
                 </div>
               </div>
 
-              <div className="text-right">
-                <p className="text-2xl font-bold text-primary">
+              <div className="text-right mobile-text-center mobile-w-full">
+                <p className="text-2xl font-bold text-primary mobile-text-xl">
                   {scoreValue.toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">pontos</p>
@@ -99,44 +99,45 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines">
-      <div className="max-w-4xl w-full space-y-6">
-        <div className="flex items-center gap-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines mobile-padding mobile-scroll-smooth">
+      <div className="max-w-4xl w-full space-y-6 mobile-space-y-4">
+        <div className="flex items-center gap-4 mobile-flex-col mobile-items-start mobile-gap-2 mobile-w-full">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={onBack}
+            className="mobile-w-full mobile-justify-center"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-4xl font-bold flex items-center gap-3">
+            <h1 className="text-4xl font-bold flex items-center gap-3 mobile-text-2xl mobile-flex-wrap">
               <Trophy className="w-8 h-8 text-primary" />
               RANKINGS
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 mobile-text-sm">
               Os melhores jogadores de Git Command Runner
             </p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="normal" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-4 mobile-overflow-x-auto mobile-scroll-smooth mobile-flex mobile-gap-2 mobile-p-2">
+            <TabsTrigger value="normal" className="flex items-center gap-2 mobile-text-xs mobile-tab-wide">
               <Target className="w-4 h-4" />
               Normal
             </TabsTrigger>
-            <TabsTrigger value="dojo" className="flex items-center gap-2">
+            <TabsTrigger value="dojo" className="flex items-center gap-2 mobile-text-xs mobile-tab-wide">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
               Dojo
             </TabsTrigger>
-            <TabsTrigger value="arcade" className="flex items-center gap-2">
+            <TabsTrigger value="arcade" className="flex items-center gap-2 mobile-text-xs mobile-tab-wide">
               <Zap className="w-4 h-4" />
               Arcade
             </TabsTrigger>
-            <TabsTrigger value="xp" className="flex items-center gap-2">
+            <TabsTrigger value="xp" className="flex items-center gap-2 mobile-text-xs mobile-tab-wide">
               <Award className="w-4 h-4" />
               XP Total
             </TabsTrigger>
@@ -145,15 +146,15 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
           <TabsContent value="normal" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 mobile-text-base">
                   <Target className="w-5 h-5 text-primary" />
                   Modo Normal - High Scores
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="mobile-text-sm">
                   Ranking de Habilidade - Melhor pontuação única
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="mobile-card-padding">
                 {renderLeaderboardTable(normalScores, loadingNormal, "high_score_normal")}
               </CardContent>
             </Card>
@@ -162,17 +163,17 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
           <TabsContent value="dojo" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                <CardTitle className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mobile-text-base">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
                   Modo Dojo - High Scores
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="mobile-text-sm">
                   Ranking de Habilidade - Melhor pontuação única
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="mobile-card-padding">
                 {renderLeaderboardTable(dojoScores, loadingDojo, "high_score_dojo")}
               </CardContent>
             </Card>
@@ -181,15 +182,15 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
           <TabsContent value="arcade" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mobile-text-base">
                   <Zap className="w-5 h-5" />
                   Modo Arcade - High Scores
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="mobile-text-sm">
                   Ranking de Habilidade - Melhor pontuação única
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="mobile-card-padding">
                 {renderLeaderboardTable(arcadeScores, loadingArcade, "high_score_arcade")}
               </CardContent>
             </Card>
@@ -198,15 +199,15 @@ export default function NewLeaderboard({ onBack }: LeaderboardProps) {
           <TabsContent value="xp" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                <CardTitle className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mobile-text-base">
                   <Award className="w-5 h-5" />
                   Hall da Fama - XP Total
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="mobile-text-sm">
                   Ranking de Persistência - Soma de todos os pontos
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="mobile-card-padding">
                 {renderLeaderboardTable(xpLeaderboard, loadingXp, "total_xp")}
               </CardContent>
             </Card>

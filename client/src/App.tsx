@@ -22,9 +22,7 @@ function Router() {
       <Route path="/cadastro" component={Cadastro} />
       <Route path="/email-confirmation" component={EmailConfirmation} />
       <Route path="/">
-        <ProtectedRoute>
-          <Home />
-        </ProtectedRoute>
+        <Home />
       </Route>
       <Route path="/profile">
         <ProtectedRoute>

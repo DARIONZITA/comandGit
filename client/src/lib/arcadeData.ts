@@ -146,7 +146,188 @@ export const ARCADE_CHALLENGES: ChallengeBlock[] = [
     correctAnswer: "git diff --staged --stat",
     points: 400,
     difficulty: 3
+  },
+  // === NÍVEL 1: Básico (8 desafios) ===
+  {
+    id: "arcade-21",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git log",
+    points: 100,
+    difficulty: 1
+  },
+  {
+    id: "arcade-22",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git diff",
+    points: 110,
+    difficulty: 1
+  },
+  {
+    id: "arcade-23",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git tag v1.0",
+    points: 120,
+    difficulty: 1
+  },
+  {
+    id: "arcade-24",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git push --tags",
+    points: 130,
+    difficulty: 1
+  },
+  {
+    id: "arcade-25",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git branch -d bugfix",
+    points: 120,
+    difficulty: 1
+  },
+  {
+    id: "arcade-26",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git checkout main",
+    points: 110,
+    difficulty: 1
+  },
+  {
+    id: "arcade-27",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git stash",
+    points: 130,
+    difficulty: 1
+  },
+  {
+    id: "arcade-28",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git fetch",
+    points: 120,
+    difficulty: 1
+  },
+
+  // === NÍVEL 2: Intermediário (9 desafios) ===
+  {
+    id: "arcade-29",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git remote add upstream https://github.com/original/repo.git",
+    points: 200,
+    difficulty: 2
+  },
+  {
+    id: "arcade-30",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git pull --rebase",
+    points: 210,
+    difficulty: 2
+  },
+  {
+    id: "arcade-31",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git restore index.html",
+    points: 220,
+    difficulty: 2
+  },
+  {
+    id: "arcade-32",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git rm --cached secrets.txt",
+    points: 230,
+    difficulty: 2
+  },
+  {
+    id: "arcade-33",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git remote -v",
+    points: 190,
+    difficulty: 2
+  },
+  {
+    id: "arcade-34",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git show abc123",
+    points: 240,
+    difficulty: 2
+  },
+  {
+    id: "arcade-35",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git clean -fd",
+    points: 250,
+    difficulty: 2
+  },
+  {
+    id: "arcade-36",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git rebase main",
+    points: 230,
+    difficulty: 2
+  },
+  {
+    id: "arcade-37",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git stash pop",
+    points: 220,
+    difficulty: 2
+  },
+
+  // === NÍVEL 3: Avançado (8 desafios) ===
+  {
+    id: "arcade-38",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git blame README.md",
+    points: 300,
+    difficulty: 3
+  },
+  {
+    id: "arcade-39",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git reflog",
+    points: 310,
+    difficulty: 3
+  },
+  {
+    id: "arcade-40",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git bisect start",
+    points: 320,
+    difficulty: 3
+  },
+  {
+    id: "arcade-41",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git bisect bad",
+    points: 300,
+    difficulty: 3
+  },
+  {
+    id: "arcade-42",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git worktree add ../hotfix hotfix",
+    points: 350,
+    difficulty: 3
+  },
+  {
+    id: "arcade-43",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git submodule add https://github.com/user/utils.git lib/utils",
+    points: 360,
+    difficulty: 3
+  },
+  {
+    id: "arcade-44",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git submodule update --init --recursive",
+    points: 380,
+    difficulty: 3
+  },
+  {
+    id: "arcade-45",
+    scenario: "Digite o comando exato:",
+    correctAnswer: "git log --author=\"John\" --since=\"2025-01-01\"",
+    points: 400,
+    difficulty: 3
   }
+  
 ];
 
 // Configuração de velocidade por nível

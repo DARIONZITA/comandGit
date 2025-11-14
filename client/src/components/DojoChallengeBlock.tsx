@@ -12,33 +12,33 @@ export default function DojoChallengeBlock({ challenge, position, isExpiring }: 
   
   return (
     <div
-      className="absolute left-1/2 -translate-x-1/2 w-[600px] transition-all duration-100"
+      className="absolute left-1/2 -translate-x-1/2 w-[600px] mobile-challenge-sm mobile-challenge-container transition-all duration-100"
       style={{
         top: `${position}px`,
       }}
     >
       <Card 
-        className={`p-6 shadow-2xl border-2 ${
+        className={`p-6 mobile-card-compact shadow-2xl border-2 ${
           isExpiring 
             ? "border-destructive bg-destructive/10 animate-pulse" 
             : "border-blue-500/50 bg-blue-500/5"
         }`}
       >
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+        <div className="space-y-3 mobile-space-y-1">
+          <div className="flex items-center justify-between mobile-flex-col mobile-gap-1">
+            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mobile-text-xs">
               Dojo - Preencha a Lacuna
             </span>
-            <span className="text-xs font-bold text-primary">
+            <span className="text-xs font-bold text-primary mobile-text-xs">
               +{challenge.points} pts
             </span>
           </div>
           
-          <p className="text-sm text-muted-foreground mb-2">
+          <p className="text-sm text-muted-foreground mb-2 mobile-text-xs mobile-mb-1">
             {challenge.scenario}
           </p>
 
-          <div className="font-mono text-lg bg-muted/50 p-4 rounded-md border border-border">
+          <div className="font-mono text-lg bg-muted/50 p-4 rounded-md border border-border mobile-text-sm mobile-p-2">
             {blankText.split(/(\[_+\])/g).map((part, idx) => {
               if (part.match(/\[_+\]/)) {
                 return (
@@ -51,7 +51,7 @@ export default function DojoChallengeBlock({ challenge, position, isExpiring }: 
             })}
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mobile-text-xs mobile-gap-1">
             <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             Digite apenas o que falta no comando
           </div>

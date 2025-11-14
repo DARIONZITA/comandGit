@@ -66,6 +66,14 @@ export default function Home() {
     setSelectedMode(mode);
   };
 
+  const handleProfileClick = () => {
+    if (!user) {
+      setLocation('/login');
+      return;
+    }
+    setLocation('/profile');
+  };
+
   const handleStartPhase = (worldId: number) => {
     if (!selectedMode) return;
     setLocation(`/game/${worldId}?mode=${selectedMode}`);
@@ -73,12 +81,13 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen">
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 mobile-gap-2 mobile-padding">
         <Button
           variant="outline"
           size="icon"
-          onClick={() => setLocation('/profile')}
+          onClick={handleProfileClick}
           title="Ver Perfil"
+          className="mobile-btn-icon-lg"
         >
           <User className="w-4 h-4" />
         </Button>

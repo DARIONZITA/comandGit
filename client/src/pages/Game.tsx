@@ -24,6 +24,16 @@ import { toast } from "@/hooks/use-toast";
 import { useAddGameScore } from "@/hooks/useGameScores";
 import { useAuth } from "@/contexts/AuthContext";
 
+// Função para embaralhar array (Fisher-Yates shuffle)
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 interface FallingChallenge {
   challenge: ChallengeBlockType;
   position: number;
@@ -73,6 +83,7 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
   const [challengeStatus, setChallengeStatus] = useState<ChallengeStatus>("idle");
   const [challengeQueue, setChallengeQueue] = useState<ChallengeBlockType[]>([]);
   const [sequenceStep, setSequenceStep] = useState(0); // Índice do comando atual na sequência
+  const [failureReason, setFailureReason] = useState<"timeout" | "wrong">("timeout"); // Razão da falha
   
   // Rastreamento de desafios falhados
   const [failedChallenges, setFailedChallenges] = useState<ChallengeBlockType[]>([]);
@@ -83,8 +94,9 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
   // Sistema de som
   const sounds = useGameSounds();
 
-  // Sistema de simulação Git
-  const gitState = useGitState();
+  // Sistema de simulação Git - Arcade e Dojo usam 800ms, outros modos 2000ms
+  const outputDuration = (mode === "arcade" || mode === "dojo") ? 800 : 2000;
+  const gitState = useGitState(outputDuration);
 
   const initialHighScore = readBestScore(mode);
   const [highScore, setHighScore] = useState(initialHighScore);
@@ -170,7 +182,8 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
       setUseDynamicSystem(false);
       setLastDynamicWorldId(null);
       if (challengeQueue.length === 0) {
-        setChallengeQueue([...DOJO_CHALLENGES]);
+        const dojoChallengesByWorld = DOJO_CHALLENGES.filter(c => c.worldId === worldId);
+        setChallengeQueue(shuffleArray(dojoChallengesByWorld));
       }
       return;
     }
@@ -304,7 +317,8 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
       setTimeout(() => {
         setLevel(l => l + 1);
         if (mode === "dojo") {
-          setChallengeQueue([...DOJO_CHALLENGES]);
+          const dojoChallengesByWorld = DOJO_CHALLENGES.filter(c => c.worldId === worldId);
+          setChallengeQueue(shuffleArray(dojoChallengesByWorld));
         } else if (world) {
           setChallengeQueue([...world.challenges]);
         }
@@ -312,10 +326,8 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
     }
   }, [currentChallenge, challengeQueue, isPaused, isGameOver, mode, world, level, useDynamicSystem, dynamicChallenges.currentChallenge]);
 
-  // Timeout handler (Modos Normal e Dojo)
-  const handleTimeout = useCallback(async () => {
-    if (mode === "arcade") return;
-    
+  // Função compartilhada para lidar com falha (timeout ou erro)
+  const handleChallengeFailure = useCallback(async () => {
     sounds.stopTickTock();
     sounds.playFailure();
     
@@ -398,8 +410,15 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
           dynamicChallenges.fetchRandomChallenge(dynamicWorld.world_id);
         }
       }
-    }, 600);
-  }, [mode, sounds, currentChallenge, useDynamicSystem, dynamicChallenge, dynamicChallenges, worldId]);
+    }, 1500);
+  }, [currentChallenge, useDynamicSystem, dynamicChallenge, dynamicChallenges, worldId, sounds]);
+
+  // Timeout handler (Modos Normal e Dojo) - agora usa a função compartilhada
+  const handleTimeout = useCallback(async () => {
+    if (mode === "arcade") return;
+    setFailureReason("timeout"); // Marca como timeout
+    await handleChallengeFailure();
+  }, [mode, handleChallengeFailure]);
 
   // Configuração de velocidade para modo arcade
   const getArcadeSpeed = () => {
@@ -423,13 +442,19 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
         let randomLeft: number;
         let attempts = 0;
         
+        // Detectar se é mobile
+        const isMobile = window.innerWidth <= 768;
+        const cardWidth = isMobile ? 300 : 500; // Card menor no mobile (max-w-[90vw])
+        const minMargin = isMobile ? 20 : 50; // Margem mínima das bordas
+        const minSpacing = isMobile ? 320 : 550; // Espaçamento mínimo entre cards
+        
         do {
-          // Blocos menores (500px), então mais espaço entre eles
-          randomLeft = Math.random() * (window.innerWidth - 600) + 50;
+          // Ajustar área disponível para mobile
+          randomLeft = Math.random() * (window.innerWidth - cardWidth - minMargin * 2) + minMargin;
           attempts++;
         } while (
           attempts < 10 && 
-          usedPositions.some(pos => Math.abs(pos - randomLeft) < 550)
+          usedPositions.some(pos => Math.abs(pos - randomLeft) < minSpacing)
         );
         
         const newFalling: FallingChallenge = {
@@ -605,17 +630,17 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
         } else {
           console.log('[Game] ❌ Command validation failed');
           console.log('[Game] Result message:', result.message);
-          sounds.playFailure();
-          setCombo(0);
-          setSequenceStep(0);
-          setShake(true);
-          setTimeout(() => setShake(false), 300);
+          // Marcar como resposta errada
+          setFailureReason("wrong");
+          // Usar função compartilhada para falha
+          await handleChallengeFailure();
         }
       } catch (error) {
         console.error('Erro ao validar comando:', error);
-        sounds.playFailure();
-        setShake(true);
-        setTimeout(() => setShake(false), 300);
+        // Marcar como resposta errada
+        setFailureReason("wrong");
+        // Usar função compartilhada para falha
+        await handleChallengeFailure();
       }
       return;
     }
@@ -681,11 +706,10 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
         }, 800);
       }
     } else {
-      sounds.playFailure();
-      setCombo(0);
-      setSequenceStep(0); // Resetar sequência ao errar
-      setShake(true);
-      setTimeout(() => setShake(false), 300);
+      // Marcar como resposta errada
+      setFailureReason("wrong");
+      // Usar função compartilhada para falha
+      await handleChallengeFailure();
     }
   }, [
     fallingChallenges, 
@@ -700,7 +724,8 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
     dynamicChallenge,
     dynamicChallenges,
     worldId,
-    gitState
+    gitState,
+    handleChallengeFailure
   ]);
 
   const handleRestart = async () => {
@@ -720,11 +745,11 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
     savedModeRef.current = null; // Resetar modo salvo
     
     if (mode === "dojo") {
-      setChallengeQueue([...DOJO_CHALLENGES]);
+      const dojoChallengesByWorld = DOJO_CHALLENGES.filter(c => c.worldId === worldId);
+      setChallengeQueue(shuffleArray(dojoChallengesByWorld));
     } else if (mode === "arcade") {
       // Embaralhar desafios do Arcade ao reiniciar
-      const shuffled = [...ARCADE_CHALLENGES].sort(() => Math.random() - 0.5);
-      setChallengeQueue(shuffled);
+      setChallengeQueue(shuffleArray(ARCADE_CHALLENGES));
     } else if (mode === "normal" && useDynamicSystem) {
       // Reiniciar sistema dinâmico
       const dynamicWorld = dynamicChallenges.worlds.find(w => w.world_level === worldId);
@@ -832,8 +857,8 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
   }
 
   return (
-    <div className="relative h-screen overflow-hidden bg-background scan-lines">
-      <div className="absolute top-4 right-4 z-20">
+    <div className="relative h-screen overflow-hidden bg-background scan-lines mobile-game-container mobile-game-area-responsive">
+      <div className="absolute top-4 right-4 z-20 mobile-top-2 mobile-right-2">
         <ThemeToggle />
       </div>
 
@@ -849,13 +874,15 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
         onPause={() => setIsPaused(true)}
       />
 
-      {/* Output do Comando Git */}
-      <CommandOutput
-        output={gitState.commandOutput}
-        show={gitState.showOutput}
-      />
+      {/* Output do Comando Git - SOMENTE para Arcade e Dojo */}
+      {(mode === "arcade" || mode === "dojo") && (
+        <CommandOutput
+          output={gitState.commandOutput}
+          show={gitState.showOutput}
+        />
+      )}
 
-      <div className="absolute inset-0 pt-32 pb-32">
+      <div className="absolute inset-0 pt-32 pb-32 mobile-game-area mobile-challenge-visible">
         {mode === "arcade" ? (
           // Modo Arcade: blocos caindo (sistema antigo)
           fallingChallenges.map((fc) => (
@@ -873,15 +900,18 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
           currentChallenge && (
             mode === "dojo" ? (
               <StaticDojoChallengeBlock
+                key={`dojo-${currentChallenge.id}-${Date.now()}`}
                 challenge={currentChallenge}
                 onTimeout={handleTimeout}
                 isPaused={isPaused}
                 feedbackState={challengeStatus}
                 timeLimit={getTimeLimit()}
                 onCriticalTime={() => sounds.playTickTock()}
+                failureReason={failureReason}
               />
             ) : (
               <StaticChallengeBlock
+                key={`normal-${currentChallenge.id}-${Date.now()}`}
                 challenge={currentChallenge}
                 onTimeout={handleTimeout}
                 isPaused={isPaused}
@@ -889,6 +919,9 @@ export default function Game({ worldId, mode = "normal" }: GameProps) {
                 timeLimit={getTimeLimit()}
                 onCriticalTime={() => sounds.playTickTock()}
                 sequenceStep={sequenceStep}
+                commandOutput={gitState.commandOutput}
+                showOutput={gitState.showOutput}
+                failureReason={failureReason}
               />
             )
           )

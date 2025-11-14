@@ -14,7 +14,7 @@ export interface GitState {
   commitHistory: { hash: string; message: string; branch: string }[];
 }
 
-export function useGitState() {
+export function useGitState(outputDuration: number = 2000) {
   const [gitState, setGitState] = useState<GitState>({
     currentBranch: 'main',
     branches: ['main'],
@@ -159,13 +159,13 @@ export function useGitState() {
     setCommandOutput(output);
     setShowOutput(!!output);
 
-    // Auto-esconder output após 2 segundos (exceto para alguns comandos)
+    // Auto-esconder output após o tempo configurado (exceto para alguns comandos)
     if (output && !trimmed.includes('status') && !trimmed.includes('branch')) {
-      setTimeout(() => setShowOutput(false), 2000);
+      setTimeout(() => setShowOutput(false), outputDuration);
     }
 
     return { output, newState };
-  }, [gitState, generateHash]);
+  }, [gitState, generateHash, outputDuration]);
 
   // Adicionar arquivo ao estado (usado pelos desafios)
   const addFile = useCallback((fileName: string, status: GitFileState['status'] = 'untracked') => {

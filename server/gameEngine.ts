@@ -109,10 +109,9 @@ export class GameEngine {
     const vars = variables || this.currentChallengeVariables;
     
     for (const [key, value] of Object.entries(vars)) {
-      // Se a chave já tem colchetes, usar diretamente
-      // Se não tem, adicionar colchetes
-      const pattern = key.startsWith('[') ? key : `[${key}]`;
-      result = result.replace(new RegExp(pattern.replace(/[[\]]/g, '\\$&'), 'g'), value);
+      // Suporta tanto {{variable}} quanto variable
+      const pattern = key.startsWith('{{') ? key : `{{${key}}}`;
+      result = result.replace(new RegExp(pattern.replace(/[{}]/g, '\\$&'), 'g'), value);
     }
     
     return result;
@@ -122,7 +121,7 @@ export class GameEngine {
    * Extrai todas as variáveis de um template
    */
   private extractVariables(template: string): string[] {
-    const matches = template.match(/\[[\w_]+\]/g);
+    const matches = template.match(/\{\{[\w_]+\}\}/g);
     return matches ? Array.from(new Set(matches)) : [];
   }
 
@@ -334,17 +333,9 @@ export class GameEngine {
       }
 
       // Substituir variáveis nas respostas esperadas
-      const substitutedAnswers = expectedAnswers.map(answer => {
-        let result = answer;
-        if (variables) {
-          Object.entries(variables).forEach(([key, value]) => {
-            const cleanKey = key.replace(/^\[|\]$/g, '');
-            const placeholder = `[${cleanKey}]`;
-            result = result.replace(new RegExp(placeholder.replace(/[[\]]/g, '\\$&'), 'g'), value);
-          });
-        }
-        return result;
-      });
+      const substitutedAnswers = expectedAnswers.map(answer => 
+        this.replaceVariables(answer, variables)
+      );
 
       console.log('[GameEngine] Substituted answers:', substitutedAnswers);
 
@@ -437,27 +428,12 @@ export class GameEngine {
     
     for (const transition of transitions) {
       // Substitui variáveis no pattern
-      let pattern = transition.answer_pattern;
+      const originalPattern = transition.answer_pattern;
       
-      console.log('[GameEngine] Original pattern:', transition.answer_pattern);
+      console.log('[GameEngine] Original pattern:', originalPattern);
       
-      // Substituir variáveis no pattern (com escape para regex)
-      if (variables) {
-        Object.entries(variables).forEach(([key, value]) => {
-          // Remover colchetes da chave se existirem
-          const cleanKey = key.replace(/^\[|\]$/g, '');
-          // Procurar por [KEY] ou (KEY) no pattern
-          const placeholderBracket = `[${cleanKey}]`;
-          const placeholderParen = `(${placeholderBracket})`;
-          
-          // Escapar caracteres especiais do valor para usar em regex
-          const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          
-          // Substituir [FILE_NAME] ou ([FILE_NAME])
-          pattern = pattern.replace(new RegExp(placeholderBracket.replace(/[[\]]/g, '\\$&'), 'g'), escapedValue);
-          pattern = pattern.replace(new RegExp(placeholderParen.replace(/[()[\]]/g, '\\$&'), 'g'), `(${escapedValue})`);
-        });
-      }
+      // Substituir variáveis no pattern usando o método replaceVariables
+      const pattern = this.replaceVariables(originalPattern, variables);
       
       console.log('[GameEngine] Pattern after variable substitution:', pattern);
       

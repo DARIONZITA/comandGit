@@ -57,24 +57,24 @@ export default function Cadastro() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Cadastro</CardTitle>
-          <CardDescription className="text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 dark:from-gray-900 dark:to-gray-800 p-4 mobile-padding">
+      <Card className="w-full max-w-md mobile-modal-full">
+        <CardHeader className="space-y-1 mobile-card-padding">
+          <CardTitle className="text-2xl font-bold text-center mobile-text-xl">Cadastro</CardTitle>
+          <CardDescription className="text-center mobile-text-base">
             Crie sua conta para começar
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="mobile-card-padding">
+          <form onSubmit={handleSubmit} className="space-y-4 mobile-space-y-3">
             {error && (
               <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="mobile-text-sm">{error}</AlertDescription>
               </Alert>
             )}
             
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
+            <div className="space-y-2 mobile-space-y-2">
+              <Label htmlFor="name" className="mobile-text-base">Nome</Label>
               <Input
                 id="name"
                 type="text"
@@ -82,12 +82,13 @@ export default function Cadastro() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={loading}
+                className="mobile-input-lg"
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-2 mobile-space-y-2">
+              <Label htmlFor="email" className="mobile-text-base">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -95,12 +96,13 @@ export default function Cadastro() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
+                className="mobile-input-lg"
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+            <div className="space-y-2 mobile-space-y-2">
+              <Label htmlFor="password" className="mobile-text-base">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -108,12 +110,13 @@ export default function Cadastro() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
+                className="mobile-input-lg"
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+            <div className="space-y-2 mobile-space-y-2">
+              <Label htmlFor="confirmPassword" className="mobile-text-base">Confirmar Senha</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -121,20 +124,21 @@ export default function Cadastro() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
+                className="mobile-input-lg"
                 required
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full mobile-btn-lg" disabled={loading}>
               {loading ? 'Criando conta...' : 'Criar conta'}
             </Button>
 
-            <div className="text-center text-sm">
+            <div className="text-center text-sm mobile-text-base">
               <span className="text-muted-foreground">Já tem uma conta? </span>
               <Button
                 type="button"
                 variant="ghost"
-                className="p-0 h-auto"
+                className="p-0 h-auto mobile-btn-lg"
                 onClick={() => setLocation('/login')}
               >
                 Faça login

@@ -35,25 +35,25 @@ export function InvitePlayerSearch({
 
   if (isWaitingForResponse) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines">
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines mobile-padding mobile-scroll-smooth">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(6,182,212,0.15),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(16,185,129,0.1),transparent_50%)]" />
         
-        <div className="max-w-2xl w-full space-y-8 relative z-10">
+        <div className="max-w-2xl w-full space-y-8 relative z-10 mobile-space-y-6">
           <div className="text-center space-y-4">
-            <Send className="w-24 h-24 text-cyan-400 mx-auto mb-4 animate-bounce drop-shadow-[0_0_20px_rgba(6,182,212,0.8)]" />
-            <h1 className="text-5xl font-bold tracking-tight">
+            <Send className="w-24 h-24 text-cyan-400 mx-auto mb-4 animate-bounce drop-shadow-[0_0_20px_rgba(6,182,212,0.8)] mobile-text-4xl" />
+            <h1 className="text-5xl font-bold tracking-tight mobile-text-3xl">
               CONVITE
               <br />
               <span className="text-cyan-400">ENVIADO!</span>
             </h1>
-            <p className="text-xl text-muted-foreground">
+            <p className="text-xl text-muted-foreground mobile-text-base">
               Aguardando resposta de <span className="text-cyan-400 font-bold">{sentInviteUsername}</span>
             </p>
           </div>
 
           <Card className="hover-elevate border-2 border-cyan-500/40 bg-gray-900/80 backdrop-blur-md">
-            <CardContent className="pt-6 pb-6">
+            <CardContent className="pt-6 pb-6 mobile-card-padding">
               <div className="space-y-4 text-center">
                 <div className="flex items-center justify-center gap-3">
                   <span className="w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></span>
@@ -66,11 +66,11 @@ export function InvitePlayerSearch({
             </CardContent>
           </Card>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 mobile-flex-col">
             <Button
               onClick={onCancelInvite}
               variant="outline"
-              className="flex-1 py-6 text-lg font-bold border-red-500/50 text-red-400 hover:bg-red-500/10"
+              className="flex-1 py-6 text-lg font-bold border-red-500/50 text-red-400 hover:bg-red-500/10 mobile-btn-lg mobile-w-full"
             >
               <X className="w-5 h-5 mr-2" />
               Cancelar Convite
@@ -82,25 +82,25 @@ export function InvitePlayerSearch({
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 scan-lines mobile-padding mobile-scroll-smooth">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(6,182,212,0.15),transparent_50%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(16,185,129,0.1),transparent_50%)]" />
       
-      <div className="max-w-3xl w-full space-y-8 relative z-10">
+      <div className="max-w-3xl w-full space-y-8 relative z-10 mobile-space-y-6">
         <div className="text-center space-y-4">
-          <h1 className="text-5xl font-bold tracking-tight">
+          <h1 className="text-5xl font-bold tracking-tight mobile-text-3xl">
             BUSCAR
             <br />
             <span className="text-cyan-400">JOGADOR</span>
           </h1>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-muted-foreground mobile-text-base">
             Digite o nome de usuário ou email
           </p>
         </div>
 
         {/* Barra de Busca */}
         <Card className="border-2 border-cyan-500/40 bg-gray-900/80 backdrop-blur-md">
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 mobile-card-padding">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-cyan-400" />
               <Input
@@ -108,7 +108,7 @@ export function InvitePlayerSearch({
                 placeholder="Digite para buscar..."
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-12 pr-12 py-6 text-lg bg-black/50 border-cyan-500/30 focus:border-cyan-500 text-white placeholder:text-gray-500"
+                className="pl-12 pr-12 py-6 text-lg bg-black/50 border-cyan-500/30 focus:border-cyan-500 text-white placeholder:text-gray-500 mobile-input-lg mobile-text-base"
                 autoFocus
               />
               {isSearching && (
@@ -120,8 +120,8 @@ export function InvitePlayerSearch({
 
         {/* Resultados da Busca */}
         {searchTerm.length >= 2 && (
-          <Card className="border-2 border-cyan-500/40 bg-gray-900/80 backdrop-blur-md max-h-96 overflow-y-auto custom-scrollbar">
-            <CardContent className="pt-4 pb-4">
+          <Card className="border-2 border-cyan-500/40 bg-gray-900/80 backdrop-blur-md max-h-96 overflow-y-auto custom-scrollbar mobile-max-h-60vh mobile-scroll-smooth">
+            <CardContent className="pt-4 pb-4 mobile-card-padding">
               {searchResults.length === 0 && !isSearching && (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>Nenhum jogador encontrado</p>
@@ -159,7 +159,7 @@ export function InvitePlayerSearch({
 
         {searchTerm.length < 2 && (
           <Card className="border-2 border-cyan-500/20 bg-gray-900/50 backdrop-blur-md">
-            <CardContent className="pt-6 pb-6">
+            <CardContent className="pt-6 pb-6 mobile-card-padding">
               <div className="text-center text-muted-foreground space-y-2">
                 <p>Digite pelo menos 2 caracteres para buscar</p>
                 <p className="text-xs">Os resultados aparecerão aqui</p>
@@ -173,7 +173,7 @@ export function InvitePlayerSearch({
             onClick={onBack}
             variant="outline"
             size="lg"
-            className="border-cyan-500/50 hover:bg-cyan-500/10 hover:border-cyan-500 text-cyan-400"
+            className="border-cyan-500/50 hover:bg-cyan-500/10 hover:border-cyan-500 text-cyan-400 mobile-btn-lg mobile-w-full"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Voltar

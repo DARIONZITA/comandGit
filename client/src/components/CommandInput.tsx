@@ -55,28 +55,30 @@ export default function CommandInput({
   };
 
   return (
-    <div className={`fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t p-6 ${shake ? 'shake' : ''}`}>
+    <div className={`fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t p-6 mobile-input-fixed ${shake ? 'shake' : ''}`}>
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mobile-flex-col mobile-gap-1">
           <GitPrompt 
             currentBranch={currentBranch} 
             workingDirectory={workingDirectory}
           />
-          <Input
-            ref={inputRef}
-            type="text"
-            value={value}
-            onChange={handleInputChange}
-            disabled={disabled}
-            className="flex-1 text-xl font-mono bg-transparent border-0 border-b-2 border-primary/30 rounded-none focus-visible:ring-0 focus-visible:border-primary px-2 py-3"
-            placeholder="Digite o comando Git..."
-            autoComplete="off"
-            spellCheck={false}
-            data-testid="input-command"
-          />
-          <div className="w-3 h-8 bg-primary animate-pulse" data-testid="cursor-indicator" />
+          <div className="flex items-center gap-3 mobile-gap-1 flex-1 mobile-w-full">
+            <Input
+              ref={inputRef}
+              type="text"
+              value={value}
+              onChange={handleInputChange}
+              disabled={disabled}
+              className="flex-1 text-xl mobile-text-sm font-mono bg-transparent border-0 border-b-2 border-primary/30 rounded-none focus-visible:ring-0 focus-visible:border-primary px-2 py-3 mobile-px-2 mobile-py-2"
+              placeholder="Digite o comando Git..."
+              autoComplete="off"
+              spellCheck={false}
+              data-testid="input-command"
+            />
+            <div className="w-3 h-8 bg-primary animate-pulse mobile-hidden" data-testid="cursor-indicator" />
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-2 ml-8">
+        <p className="text-xs text-muted-foreground mt-2 ml-8 mobile-text-xs mobile-ml-0 mobile-text-center mobile-mt-1">
           Pressione ENTER para submeter o comando
         </p>
       </form>

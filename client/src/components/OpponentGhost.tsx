@@ -46,14 +46,14 @@ export function OpponentGhost({
     if (flashColor === 'red') {
       return 'bg-red-500/30 border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.5)] animate-flash-red';
     }
-    return 'bg-gray-800/50 border-gray-700';
+    return 'bg-muted/50 border-border';
   };
 
   return (
     <div className="w-full">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold text-gray-400">
+        <span className="text-xs font-semibold text-muted-foreground">
           Atividade de {opponentUsername}
         </span>
         {displayLength > 0 && (
@@ -71,7 +71,7 @@ export function OpponentGhost({
         <div className="p-4 font-mono text-sm">
           <div className="flex items-center space-x-2 mb-2">
             <span className="text-primary">$</span>
-            <span className="text-gray-500">git</span>
+            <span className="text-muted-foreground">git</span>
           </div>
           
           {/* Indicador de digitação com asteriscos */}
@@ -84,7 +84,7 @@ export function OpponentGhost({
                 <span className="text-red-400 animate-pulse">|</span>
               </div>
             ) : (
-              <span className="text-gray-600 italic text-xs">aguardando...</span>
+              <span className="text-muted-foreground italic text-xs">aguardando...</span>
             )}
           </div>
         </div>
@@ -107,7 +107,7 @@ export function OpponentGhost({
       </div>
 
       {/* Status */}
-      <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
         <span>
           {displayLength > 0 ? '⚡ Digitando rapidamente...' : '💤 Pensando...'}
         </span>
